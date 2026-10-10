@@ -503,10 +503,13 @@ private:
                 double start = 0.0;
                 const double segLen = rng.uniform (0.06f, 0.25f) * sr;
 
-                if (pendingTunnelOnset >= 0 && now - (double) pendingTunnelOnset >= segLen + 0.02 * sr)
+                // Loop the sustained part of a new note, not its pick attack:
+                // a looped attack pulses at the loop rate instead of droning.
+                const double skipAttack = 0.09 * sr;
+                if (pendingTunnelOnset >= 0 && now - (double) pendingTunnelOnset >= skipAttack + segLen + 0.02 * sr)
                 {
                     trigger = true;
-                    start = (double) pendingTunnelOnset;
+                    start = (double) pendingTunnelOnset + skipAttack;
                     pendingTunnelOnset = -1;
                 }
                 else if (crossed (1.0) && --unitCountdown <= 0)
