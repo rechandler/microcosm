@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Version to publish as a GitHub Release (e.g. v1.0.0). Leave empty to just build."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -113,7 +118,7 @@ jobs:
 
   release:
     name: Publish release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release != '')
     needs: [windows, macos]
     runs-on: ubuntu-latest
     steps:
@@ -128,6 +133,8 @@ jobs:
           merge-multiple: true
       - uses: softprops/action-gh-release@v2
         with:
-          name: Macrocosm ${{ github.ref_name }}
+          tag_name: ${{ inputs.release || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Macrocosm ${{ inputs.release || github.ref_name }}
           body_path: docs/RELEASE_NOTES.md
           files: artifacts/*.zip
