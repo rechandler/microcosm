@@ -42,6 +42,14 @@ jobs:
           # GitHub's Windows runners have no GPU; editor tests are run separately below.
           .\pluginval\pluginval.exe --strictness-level 8 --timeout-ms 600000 --skip-gui-tests --output-dir pluginval-logs "build\Macrocosm_artefacts\Release\VST3\Macrocosm.vst3"
           if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: pluginval canary (diagnostic)
+        if: failure()
+        shell: pwsh
+        run: |
+          cmake -B build -DMACROCOSM_BUILD_CANARY=ON
+          cmake --build build --config Release --target Canary_VST3 --parallel
+          .\pluginval\pluginval.exe --strictness-level 8 --timeout-ms 600000 --skip-gui-tests "build\Canary_artefacts\Release\VST3\Canary.vst3"
+          Write-Host "Canary pluginval exit code: $LASTEXITCODE"
       - name: pluginval editor tests (informational)
         shell: pwsh
         continue-on-error: true
