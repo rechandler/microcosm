@@ -322,6 +322,73 @@ int main()
         }
     }
 
+    // Note detection drives Strum, Arp, Tunnel and the delays' SHAPE: it must
+    // catch every note of a quiet DI guitar (-50 dBFS) and of a hot signal,
+    // once per note.
+    for (float level : { 0.003f, 0.3f })
+    {
+        MicrocosmDsp dsp;
+        dsp.prepare (kSr, kBlock);
+        Engine::Params p;
+        p.algo = Engine::Strum;
+        dsp.setEngineParams (p);
+        int detected = 0;
+        std::vector<float> l (kBlock), r (kBlock);
+        for (int s0 = 0; s0 < (int) kSr * 12; s0 += kBlock)
+        {
+            for (int k = 0; k < kBlock; ++k)
+            {
+                const int s = s0 + k;
+                const float t = (float) (s % 72000) / (float) kSr;
+                const float env = std::min (1.0f, t / 0.01f) * std::exp (-t * 1.2f);
+                l[(size_t) k] = r[(size_t) k] = level * env * std::sin (kTwoPi * 146.8f * t);
+            }
+            dsp.process (l.data(), r.data(), kBlock);
+            detected += dsp.getEngine().consumeOnsetFlag() ? 1 : 0;
+        }
+        const bool ok = detected == 8;
+        failures += ok ? 0 : 1;
+        std::printf ("note detection at %.0f dBFS: %d of 8%s\n", 20.0f * std::log10 (level), detected, ok ? "" : "  <-- FAIL");
+    }
+
+    // A quiet DI guitar (-40 dBFS peaks, soft attacks) must be audible through
+    // every effect at Mix 100%: nothing may round to silence or miss notes.
+    for (int a = 0; a < Engine::NumAlgos; ++a)
+    {
+        for (int v = 0; v < 4; ++v)
+        {
+            MicrocosmDsp dsp;
+            dsp.prepare (kSr, kBlock);
+            MicrocosmDsp::Global g;
+            g.mix = 1.0f;
+            g.space = 0.0f;
+            dsp.setGlobal (g);
+            Engine::Params p;
+            p.algo = a;
+            p.variation = v;
+            p.unitSamples = kSr * 0.5;
+            dsp.setEngineParams (p);
+            std::vector<float> l ((size_t) kSr * 8), r ((size_t) kSr * 8);
+            double eIn = 0;
+            for (size_t s = 0; s < l.size(); ++s)
+            {
+                const float t = (float) (s % 72000) / (float) kSr;
+                const float env = std::min (1.0f, t / 0.01f) * std::exp (-t * 1.2f);
+                const float f = 146.8f * (1.0f + (float) ((s / 72000) % 3) * 0.25f);
+                l[s] = r[s] = 0.01f * env * (0.6f * std::sin (kTwoPi * f * t) + 0.3f * std::sin (kTwoPi * 2 * f * t)
+                                             + 0.1f * std::sin (kTwoPi * 3 * f * t));
+                eIn += (double) l[s] * l[s];
+            }
+            const auto st = run (dsp, l, r);
+            const float relDb = 20.0f * std::log10 (st.rms / (float) std::sqrt (eIn / (double) l.size()));
+            if (relDb < -24.0f)
+            {
+                ++failures;
+                std::printf ("quiet input %s %c: %.1f dB  <-- FAIL\n", Engine::algoName (a), 'A' + v, relDb);
+            }
+        }
+    }
+
     // Looper: record 2 s, play back over silence.
     {
         MicrocosmDsp dsp;

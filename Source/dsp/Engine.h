@@ -81,8 +81,8 @@ public:
     {
         sr = (float) sampleRate;
         onsetAtt = 1.0f - std::exp (-1.0f / (0.001f * sr));
-        onsetRel = 1.0f - std::exp (-1.0f / (0.030f * sr));
-        onsetSlowCoeff = 1.0f - std::exp (-1.0f / (0.200f * sr));
+        onsetRel = 1.0f - std::exp (-1.0f / (0.020f * sr));
+        onsetLagSteps = std::min (kOnsetHistory - 1, (int) std::lround (0.03f * sr / kOnsetDecimation));
         history.prepare (sampleRate, 32.0);
         multiTap.prepare (sampleRate, 20.0);
         reset();
@@ -97,7 +97,10 @@ public:
         clock = prevClock = 0.0;
         counter = 0;
         onsetCount = 0;
-        onsetFast = onsetSlow = 0.0f;
+        onsetFast = 0.0f;
+        onsetHistory.fill (0.0f);
+        onsetHistoryPos = 0;
+        onsetDecimCounter = 0;
         onsetHoldoff = 0;
         pendingTunnelOnset = -1;
         chainRemaining = arpRemaining = 0;
@@ -227,17 +230,28 @@ private:
 
     bool detectOnset (float x)
     {
+        // A note starts when the level jumps by more than 6 dB within 30 ms.
+        // Comparing against the recent level (rather than a fixed threshold
+        // or a slow average) works the same for quiet DI guitar and hot
+        // signals, and doesn't re-trigger while a note sustains or decays.
         const float a = std::abs (x);
         onsetFast += (a > onsetFast ? onsetAtt : onsetRel) * (a - onsetFast);
-        onsetSlow += onsetSlowCoeff * (a - onsetSlow);
+
+        if (++onsetDecimCounter >= kOnsetDecimation)
+        {
+            onsetDecimCounter = 0;
+            onsetHistoryPos = (onsetHistoryPos + 1) % kOnsetHistory;
+            onsetHistory[(size_t) onsetHistoryPos] = onsetFast;
+        }
         if (onsetHoldoff > 0)
         {
             --onsetHoldoff;
             return false;
         }
-        if (onsetFast > 0.01f && onsetFast > onsetSlow * 2.2f + 0.002f)
+        const float earlier = onsetHistory[(size_t) ((onsetHistoryPos - onsetLagSteps + kOnsetHistory) % kOnsetHistory)];
+        if (onsetFast > 0.0015f && onsetFast > 2.0f * earlier + 0.0003f)
         {
-            onsetHoldoff = (int) (0.09f * sr);
+            onsetHoldoff = (int) (0.08f * sr);
             return true;
         }
         return false;
@@ -320,7 +334,7 @@ private:
                 if (! crossed (4.0))
                     break;
                 const int maxV = 2 + (int) (A * 10.0f);
-                if (! rng.chance (lerp (0.06f, 0.7f, A)) || activeCount() >= maxV)
+                if (! rng.chance (lerp (0.15f, 0.7f, A)) || activeCount() >= maxV)
                     break;
                 static const double lens[] = { 0.25, 0.5, 0.5, 1.0 };
                 VoiceParams p;
@@ -449,7 +463,7 @@ private:
                 hazeCountdown -= 1.0;
                 if (hazeCountdown > 0.0)
                     break;
-                const float rate = lerp (3.0f, 50.0f, std::pow (A, 1.3f));
+                const float rate = lerp (5.0f, 50.0f, std::pow (A, 1.3f));
                 hazeCountdown = sr / rate * rng.uniform (0.5f, 1.5f);
                 if (activeCount() >= 22)
                     break;
@@ -497,7 +511,7 @@ private:
                 }
                 else if (crossed (1.0) && --unitCountdown <= 0)
                 {
-                    unitCountdown = (int) std::round (lerp (8.0f, 1.0f, A));
+                    unitCountdown = (int) std::round (lerp (4.0f, 1.0f, A));
                     trigger = true;
                     start = now - segLen - rng.uniform (0.0f, 0.5f) * sr;
                 }
@@ -613,7 +627,7 @@ private:
                 const bool interrupt = prm.algo == Interrupt;
                 if (! crossed (2.0) || counter < busyUntil)
                     break;
-                const float p0 = interrupt ? lerp (0.05f, 0.6f, A) : lerp (0.1f, 0.85f, A);
+                const float p0 = interrupt ? lerp (0.12f, 0.6f, A) : lerp (0.2f, 0.85f, A);
                 if (! rng.chance (p0))
                     break;
 
@@ -789,8 +803,11 @@ private:
     int64_t counter = 0;
 
     // onset detection
-    float onsetFast = 0.0f, onsetSlow = 0.0f;
-    float onsetAtt = 0.1f, onsetRel = 0.01f, onsetSlowCoeff = 0.001f;
+    static constexpr int kOnsetDecimation = 16, kOnsetHistory = 256;
+    float onsetFast = 0.0f;
+    float onsetAtt = 0.1f, onsetRel = 0.01f;
+    std::array<float, kOnsetHistory> onsetHistory {};
+    int onsetHistoryPos = 0, onsetDecimCounter = 0, onsetLagSteps = 90;
     int onsetHoldoff = 0;
     bool onsetFlag = false;
     std::array<int64_t, kOnsetRing> onsets {};

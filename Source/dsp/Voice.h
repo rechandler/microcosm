@@ -84,6 +84,8 @@ public:
         lfoPhase = 0.0f;
         crushCounter = 0;
         heldL = heldR = 0.0f;
+        crushLevel = 0.0f;
+        crushRelease = std::exp (-1.0f / (0.15f * sampleRate));
         lastEnv = 0.0f;
         edgeFade = std::max (16.0, 0.003 * sampleRate);
     }
@@ -144,12 +146,15 @@ public:
 
         if (prm.crushBits > 0)
         {
+            // Quantise relative to the signal's own level, so a quiet DI
+            // guitar crunches like a hot one instead of rounding to silence.
+            crushLevel = std::max ({ std::abs (l), std::abs (r), crushLevel * crushRelease });
             if (crushCounter-- <= 0)
             {
                 crushCounter = prm.crushHold - 1;
-                const float steps = (float) (1 << prm.crushBits);
-                heldL = std::round (l * steps) / steps;
-                heldR = std::round (r * steps) / steps;
+                const float step = std::max (crushLevel, 1.0e-5f) * 2.0f / (float) (1 << prm.crushBits);
+                heldL = std::round (l / step) * step;
+                heldR = std::round (r / step) * step;
             }
             l = heldL;
             r = heldR;
@@ -217,7 +222,7 @@ private:
     int filterCounter = 0;
     float lfoPhase = 0.0f;
     int crushCounter = 0;
-    float heldL = 0.0f, heldR = 0.0f;
+    float heldL = 0.0f, heldR = 0.0f, crushLevel = 0.0f, crushRelease = 0.9999f;
     float lastEnv = 0.0f;
 };
 } // namespace mc
