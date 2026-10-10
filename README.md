@@ -52,7 +52,7 @@ Strum, Arp and Tunnel react to note onsets in your playing. A detector picks up 
 |---|---|
 | **Activity** | Density: how many loops, grains, slices or taps are active. Also how busy the glitches are. |
 | **Repeats** | Duration: loop lifespan, drone decay, number of strums or arp steps, delay feedback. |
-| **Shape** | Volume contour of each event: percussive (left), flat (centre), swelling (right). Tilts tap levels in the delays. |
+| **Shape** | Volume contour of each event: percussive (left), flat (centre), swelling (right). In Pattern/Warp it contours how each note feeds the echoes (plucky ↔ swelling) and tilts the tap levels. |
 | **Time** | The rhythmic unit. With **Sync** on it is a note value locked to Live's tempo and grid (1/32 … 1 bar). With Sync off it is a free time (50 ms – 2 s). |
 | **Filter** | Centre is open. Left is a low-pass, right is a high-pass. **Resonance** sets the peak. Applies to the effect only. |
 | **Mix** | Dry/wet. At the centre both are at full level, as on the pedal. |

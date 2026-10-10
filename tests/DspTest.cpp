@@ -149,6 +149,35 @@ int main()
         std::printf ("hold %-10s rms=%.4f%s\n", Engine::algoName (a), st.rms, bad ? "  <-- FAIL" : "");
     }
 
+    // SHAPE must change the delays even with a single tap (Activity 0).
+    for (int a : { (int) Engine::Pattern, (int) Engine::Warp })
+    {
+        float rms[3];
+        const float shapes[3] = { 0.0f, 0.5f, 1.0f };
+        for (int k = 0; k < 3; ++k)
+        {
+            MicrocosmDsp dsp;
+            dsp.prepare (kSr, kBlock);
+            MicrocosmDsp::Global g;
+            g.mix = 1.0f;
+            g.space = 0.0f;
+            dsp.setGlobal (g);
+            Engine::Params p;
+            p.algo = a;
+            p.variation = 2;
+            p.activity = 0.0f;
+            p.repeats = 0.7f;
+            p.shape = shapes[k];
+            p.unitSamples = kSr * 2.0;
+            dsp.setEngineParams (p);
+            rms[k] = run (dsp, inL, inR, (int) kSr).rms;
+        }
+        const bool ok = rms[0] < rms[1] * 0.85f && rms[2] < rms[1] * 0.85f;
+        failures += ok ? 0 : 1;
+        std::printf ("shape on %-8s perc=%.4f flat=%.4f swell=%.4f%s\n", Engine::algoName (a), rms[0], rms[1], rms[2],
+                     ok ? "" : "  <-- FAIL");
+    }
+
     // Looper: record 2 s, play back over silence.
     {
         MicrocosmDsp dsp;

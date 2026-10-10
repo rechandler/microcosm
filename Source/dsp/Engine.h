@@ -106,6 +106,8 @@ public:
         busyUntil = 0;
         duckSmooth = 0.0f;
         unitCountdown = 0;
+        samplesSinceOnset = 1.0e9f;
+        delayGainSmooth = 1.0f;
     }
 
     void setParams (const Params& p)
@@ -188,8 +190,16 @@ public:
                     d = std::max (d, v.currentEnvelope());
             }
 
+            float delayGain = 0.0f;
+            if (isDelay)
+            {
+                samplesSinceOnset = onset ? 0.0f : samplesSinceOnset + 1.0f;
+                delayGainSmooth += 0.01f * (delayInputGain() - delayGainSmooth);
+                delayGain = delayGainSmooth;
+            }
+
             float tl, tr;
-            multiTap.process (isDelay ? xl : 0.0f, isDelay ? xr : 0.0f, tl, tr);
+            multiTap.process (xl * delayGain, xr * delayGain, tl, tr);
             l += tl;
             r += tr;
 
@@ -231,6 +241,24 @@ private:
             return true;
         }
         return false;
+    }
+
+    // SHAPE for the delays: contours how each note feeds the echoes.
+    // Left of centre only the attack gets in (percussive repeats), right of
+    // centre each note swells in, and the centre passes everything.
+    float delayInputGain() const
+    {
+        const float S = prm.shape;
+        const float t = samplesSinceOnset / sr;
+        if (S < 0.5f)
+        {
+            const float amount = (0.5f - S) * 2.0f;
+            const float decay = lerp (2.0f, 0.06f, amount);
+            return lerp (1.0f, std::exp (-t / decay), amount);
+        }
+        const float attack = lerp (0.005f, 0.8f, (S - 0.5f) * 2.0f);
+        const float w = std::sin (0.5f * kPi * std::min (1.0f, t / attack));
+        return w * w;
     }
 
     int activeCount() const { return activeVoiceCount(); }
@@ -778,5 +806,6 @@ private:
     float arpGain = 1.0f, arpDecay = 0.9f;
     int64_t busyUntil = 0;
     float duckSmooth = 0.0f;
+    float samplesSinceOnset = 1.0e9f, delayGainSmooth = 1.0f;
 };
 } // namespace mc
