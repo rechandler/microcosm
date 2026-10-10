@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include "Presets.h"
 
 using namespace juce;
 
@@ -89,6 +90,7 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     setupKnob (space, ParamIDs::space, "SPACE", false);
     setupKnob (loopLevel, ParamIDs::loopLevel, "LOOP LEVEL", false);
     setupKnob (resonance, ParamIDs::resonance, "RESONANCE", true);
+    setupKnob (drift, ParamIDs::drift, "DRIFT", true);
     setupKnob (loopFade, ParamIDs::loopFade, "LOOP FADE", true);
     setupKnob (output, ParamIDs::output, "OUTPUT", true);
     filter.slider.getProperties().set ("bipolar", true);
@@ -110,6 +112,25 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     setupCombo (loopPosition, loopPosLabel, ParamIDs::loopPosition, "LOOP POSITION", loopPosAtt);
 
     setupToggle (syncBtn, syncAtt, ParamIDs::sync, "SYNC");
+
+    for (int i = 0; i < Presets::count; ++i)
+        presetBox.addItem (Presets::list[i].name, i + 1);
+    presetBox.setSelectedId (proc.getCurrentProgram() + 1, dontSendNotification);
+    presetBox.onChange = [this]
+    {
+        const int index = presetBox.getSelectedId() - 1;
+        if (index >= 0 && index != proc.getCurrentProgram())
+        {
+            proc.setCurrentProgram (index);
+            proc.updateHostDisplay (AudioProcessorListener::ChangeDetails().withProgramChanged (true));
+        }
+    };
+    addAndMakeVisible (presetBox);
+    presetLabel.setText ("PRESET", dontSendNotification);
+    presetLabel.setJustificationType (Justification::centredRight);
+    presetLabel.setFont (FontOptions (11.0f, Font::bold));
+    presetLabel.setColour (Label::textColourId, MicrocosmLookAndFeel::dim());
+    addAndMakeVisible (presetLabel);
     setupToggle (holdBtn, holdAtt, ParamIDs::hold, "HOLD");
     setupToggle (reverseBtn, reverseAtt, ParamIDs::fxReverse, "REVERSE");
     setupToggle (loopRevBtn, loopRevAtt, ParamIDs::loopReverse, "LOOP REV");
@@ -186,6 +207,9 @@ void MicrocosmEditor::setChoice (const char* paramId, int index)
 
 void MicrocosmEditor::timerCallback()
 {
+    if (presetBox.getSelectedId() != proc.getCurrentProgram() + 1)
+        presetBox.setSelectedId (proc.getCurrentProgram() + 1, dontSendNotification);
+
     const int algo = (int) proc.apvts.getRawParameterValue (ParamIDs::algo)->load();
     const int var = (int) proc.apvts.getRawParameterValue (ParamIDs::variation)->load();
     for (int i = 0; i < algoButtons.size(); ++i)
@@ -214,10 +238,6 @@ void MicrocosmEditor::paint (Graphics& g)
     g.setColour (MicrocosmLookAndFeel::text());
     g.setFont (FontOptions (26.0f, Font::bold));
     g.drawText ("MACROCOSM", 24, 12, 300, 34, Justification::centredLeft);
-    g.setColour (MicrocosmLookAndFeel::dim());
-    g.setFont (FontOptions (12.0f));
-    g.drawText ("granular  /  micro loop  /  glitch  /  multidelay  /  looper", 210, 12, 420, 34,
-                Justification::centredLeft);
 
     // panels
     auto drawPanel = [&g] (Rectangle<int> r)
@@ -316,7 +336,11 @@ void MicrocosmEditor::layoutKnob (Knob& k, Rectangle<int> area)
 void MicrocosmEditor::resized()
 {
     auto r = getLocalBounds().reduced (16);
-    r.removeFromTop (44);
+    auto header = r.removeFromTop (44).withTrimmedLeft (200).reduced (0, 6);
+    syncBtn.setBounds (header.removeFromRight (90));
+    header.removeFromRight (16);
+    presetBox.setBounds (header.removeFromRight (260));
+    presetLabel.setBounds (header.removeFromRight (70));
 
     leftArea = r.removeFromLeft (440);
     r.removeFromLeft (16);
@@ -335,10 +359,8 @@ void MicrocosmEditor::resized()
     l.removeFromTop (12);
 
     auto row3 = l.removeFromTop (104);
-    for (auto* k : { &resonance, &loopFade, &output })
+    for (auto* k : { &resonance, &drift, &loopFade, &output })
         layoutKnob (*k, row3.removeFromLeft (kw).reduced (12, 2));
-    auto toggles = row3.reduced (6, 18);
-    syncBtn.setBounds (toggles.removeFromTop (30));
 
     l.removeFromTop (8);
     auto row4 = l.removeFromTop (48);

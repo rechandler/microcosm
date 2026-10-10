@@ -1,29 +1,31 @@
 #pragma once
 
-#include "DspUtil.h"
+#include "PitchShifter.h"
 #include <array>
 #include <vector>
 
 namespace mc
 {
 // SPACE: an 8-line feedback delay network reverb with input diffusion,
-// per-line damping and gentle delay modulation. Four room modes modelled on
-// the Microcosm's reverb options.
+// per-line damping and gentle delay modulation. The first four rooms follow
+// the Microcosm's reverb options; Shimmer (an octave-up pitch shifter inside
+// the feedback loop, so the tail keeps rising) and Cathedral (huge, long and
+// lush) are additions for cinematic textures.
 class Reverb
 {
 public:
-    enum Mode { BrightRoom = 0, DarkMedium, LargeHall, Ambient, NumModes };
+    enum Mode { BrightRoom = 0, DarkMedium, LargeHall, Ambient, Shimmer, Cathedral, NumModes };
 
     static const char* modeName (int m)
     {
-        static const char* names[] = { "Bright Room", "Dark Medium", "Large Hall", "Ambient" };
-        return names[std::min (std::max (m, 0), 3)];
+        static const char* names[NumModes] = { "Bright Room", "Dark Medium", "Large Hall", "Ambient", "Shimmer", "Cathedral" };
+        return names[std::min (std::max (m, 0), NumModes - 1)];
     }
 
     void prepare (double sampleRate)
     {
         sr = (float) sampleRate;
-        const int maxLine = nextPowerOfTwo ((int) (sampleRate * 0.25)); // max line 250ms
+        const int maxLine = nextPowerOfTwo ((int) (sampleRate * 0.4)); // max line 400ms
         for (auto& l : lines)
             l.buf.assign ((size_t) maxLine, 0.0f), l.mask = maxLine - 1, l.pos = 0, l.lp = 0.0f;
         const int maxAp = nextPowerOfTwo ((int) (sampleRate * 0.03));
@@ -35,6 +37,18 @@ public:
             p.assign ((size_t) maxPre, 0.0f);
         preMask = maxPre - 1;
         prePos = 0;
+        const int maxShim = nextPowerOfTwo ((int) (sampleRate * 0.5));
+        shimBuf.assign ((size_t) maxShim, 0.0f);
+        shimMask = maxShim - 1;
+        shimPos = 0;
+        shifter.prepare (sr);
+        shifter.setRatio (2.0f);
+        shifter.setGrainLength (0.1f * sr);
+        shifter.reset();
+        shimAA.setCutoff (0.2f * sr, sr);
+        shimAA.reset();
+        shimHpCoeff = 1.0f - std::exp (-kTwoPi * 250.0f / sr);
+        shimHp = 0.0f;
         currentMode = -1;
         setMode (LargeHall);
     }
@@ -48,6 +62,9 @@ public:
                 std::fill (ch.buf.begin(), ch.buf.end(), 0.0f);
         for (auto& p : pre)
             std::fill (p.begin(), p.end(), 0.0f);
+        std::fill (shimBuf.begin(), shimBuf.end(), 0.0f);
+        shimAA.reset();
+        shimHp = 0.0f;
     }
 
     void setMode (int mode)
@@ -56,12 +73,14 @@ public:
             return;
         currentMode = mode;
 
-        struct Settings { float size, rt60, damp, predelay, modDepth, diffusion; };
+        struct Settings { float size, rt60, damp, predelay, modDepth, diffusion, shimmer; };
         static const Settings settings[NumModes] = {
-            { 0.30f,  0.8f, 12000.0f, 0.004f, 0.0002f, 0.55f }, // Bright Room
-            { 0.65f,  2.2f,  2800.0f, 0.015f, 0.0006f, 0.65f }, // Dark Medium
-            { 1.00f,  4.5f,  6500.0f, 0.025f, 0.0008f, 0.70f }, // Large Hall
-            { 1.00f, 14.0f,  5000.0f, 0.040f, 0.0020f, 0.75f }, // Ambient
+            { 0.30f,  0.8f, 12000.0f, 0.004f, 0.0002f, 0.55f, 0.0f }, // Bright Room
+            { 0.65f,  2.2f,  2800.0f, 0.015f, 0.0006f, 0.65f, 0.0f }, // Dark Medium
+            { 1.00f,  4.5f,  6500.0f, 0.025f, 0.0008f, 0.70f, 0.0f }, // Large Hall
+            { 1.00f, 14.0f,  5000.0f, 0.040f, 0.0020f, 0.75f, 0.0f }, // Ambient
+            { 1.20f, 10.0f,  7500.0f, 0.030f, 0.0015f, 0.72f, 1.0f }, // Shimmer
+            { 1.70f,  9.0f,  8500.0f, 0.060f, 0.0018f, 0.78f, 0.0f }, // Cathedral
         };
         const auto& s = settings[std::min (std::max (mode, 0), NumModes - 1)];
 
@@ -76,6 +95,8 @@ public:
             l.modRate = 0.11f + 0.07f * (float) i;
         }
         dampCoeff = std::exp (-kTwoPi * s.damp / sr);
+        shimmerAmount = s.shimmer;
+        outputGain = s.shimmer > 0.0f ? 0.55f : 1.0f; // match the other modes' loudness
         preDelay = std::max (1, (int) (s.predelay * sr));
         diffusion = s.diffusion;
 
@@ -125,6 +146,15 @@ public:
 
         outL = (y[0] + y[2] + y[4] + y[6]) * 0.5f;
         outR = (y[1] + y[3] + y[5] + y[7]) * 0.5f;
+        const float tapL = outL, tapR = outR;
+        outL *= outputGain;
+        outR *= outputGain;
+
+        // Shimmer: pitch the tail up an octave and feed it back in, so every
+        // pass through the reverb climbs higher.
+        float shim = 0.0f;
+        if (shimmerAmount > 0.0f)
+            shim = shimmer (0.5f * (tapL + tapR)) * shimmerAmount;
 
         // Hadamard mixing (normalised)
         hadamard8 (y);
@@ -133,12 +163,25 @@ public:
         {
             auto& l = lines[i];
             const float in = (i % 2 == 0) ? xl : xr;
-            l.buf[(size_t) l.pos] = softClip (y[i] + in * 0.5f);
+            const float sh = (i & 2) ? shim : -shim;
+            l.buf[(size_t) l.pos] = softClip (y[i] + in * 0.5f + sh);
             l.pos = (l.pos + 1) & l.mask;
         }
     }
 
 private:
+    // Octave-up pitch shifter on a band-limited, low-cut copy of the tail.
+    float shimmer (float x)
+    {
+        x = shimAA.process (x);
+        shimHp += shimHpCoeff * (x - shimHp);
+        shimBuf[(size_t) shimPos] = x - shimHp;
+        float l, r;
+        shifter.process (shimBuf.data(), shimBuf.data(), shimMask, shimPos, l, r);
+        shimPos = (shimPos + 1) & shimMask;
+        return l;
+    }
+
     static void hadamard8 (std::array<float, 8>& v)
     {
         for (int h = 1; h < 8; h <<= 1)
@@ -182,5 +225,10 @@ private:
     int preMask = 0, prePos = 0, preDelay = 1;
     float dampCoeff = 0.5f, diffusion = 0.7f;
     int currentMode = -1;
+    std::vector<float> shimBuf;
+    int shimMask = 0, shimPos = 0;
+    float outputGain = 1.0f, shimmerAmount = 0.0f, shimHp = 0.0f, shimHpCoeff = 0.03f;
+    PitchShifter shifter;
+    AntiAliasFilter shimAA;
 };
 } // namespace mc

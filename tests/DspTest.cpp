@@ -2,6 +2,7 @@
 // (44 presets) plus hold, reverse and the looper over synthetic plucked
 // input, and checks for silence, NaNs and runaway levels.
 #include "../Source/dsp/MicrocosmDsp.h"
+#include "../Source/Presets.h"
 #include <chrono>
 #if defined(__SSE__) || defined(_M_X64)
  #include <xmmintrin.h>
@@ -206,6 +207,118 @@ int main()
                 ++failures;
                 std::printf ("runaway %s %c: tail peak %.3f  <-- FAIL\n", Engine::algoName (a), 'A' + v, st.peak);
             }
+        }
+    }
+
+    // Anti-aliasing: an octave above a 15 kHz tone is above Nyquist, so octave-up
+    // playback must stay near-silent instead of folding it back down as a
+    // harsh tone. Checked on a single 2x grain head and on Warp D (2x taps).
+    {
+        HistoryBuffer hb;
+        hb.prepare (kSr, 4.0);
+        for (int i = 0; i < (int) kSr * 2; ++i)
+        {
+            const float x = 0.3f * std::sin (kTwoPi * 15000.0f * (float) i / (float) kSr);
+            hb.write (x, x);
+        }
+        Voice v;
+        VoiceParams vp;
+        vp.segStart = (double) hb.now() - kSr;
+        vp.segLen = kSr * 0.5;
+        vp.speed = vp.speedEnd = 2.0;
+        vp.life = kSr;
+        vp.gain = 1.0f;
+        vp.shape = 0.5f;
+        v.start (vp, (float) kSr);
+        double e = 0;
+        for (int i = 0; i < (int) kSr; ++i)
+        {
+            float l = 0, r = 0;
+            v.render (hb, l, r);
+            e += (double) l * l;
+        }
+        const float rms = (float) std::sqrt (e / kSr);
+        const bool ok = rms < 0.003f;
+        failures += ok ? 0 : 1;
+        std::printf ("aliasing 2x grain: rms=%.5f%s\n", rms, ok ? "" : "  <-- FAIL");
+    }
+    {
+        std::vector<float> l ((size_t) kSr * 4), r ((size_t) kSr * 4);
+        for (size_t i = 0; i < l.size(); ++i)
+            l[i] = r[i] = 0.3f * std::sin (kTwoPi * 15000.0f * (float) i / (float) kSr);
+        MicrocosmDsp dsp;
+        dsp.prepare (kSr, kBlock);
+        MicrocosmDsp::Global g;
+        g.mix = 1.0f;
+        g.space = 0.0f;
+        dsp.setGlobal (g);
+        Engine::Params p;
+        p.algo = Engine::Warp;
+        p.variation = 3;
+        p.activity = 0.6f;
+        p.repeats = 0.6f;
+        p.unitSamples = kSr * 0.5;
+        dsp.setEngineParams (p);
+        const auto st = run (dsp, l, r, (int) kSr);
+        const bool ok = st.rms < 0.003f;
+        failures += ok ? 0 : 1;
+        std::printf ("aliasing Warp D: rms=%.5f%s\n", st.rms, ok ? "" : "  <-- FAIL");
+    }
+
+    // Factory presets: each must make sound, stay below clipping, and die
+    // away once the playing stops (Infinite Pad is meant to sustain longer).
+    {
+        static const double divisionBeats[] = { 0.125, 1.0 / 6.0, 0.25, 1.0 / 3.0, 0.5, 2.0 / 3.0, 1.0, 1.5, 2.0, 4.0 };
+        for (int i = 0; i < Presets::count; ++i)
+        {
+            const auto& pr = Presets::list[i];
+            MicrocosmDsp dsp;
+            dsp.prepare (kSr, kBlock);
+            MicrocosmDsp::Global g;
+            g.filter = pr.filter;
+            g.resonance = pr.resonance;
+            g.mix = pr.mix;
+            g.space = pr.space;
+            g.reverbMode = pr.reverbMode;
+            g.drift = pr.drift;
+            dsp.setGlobal (g);
+            Engine::Params p;
+            p.algo = pr.algo;
+            p.variation = pr.variation;
+            p.activity = pr.activity;
+            p.repeats = pr.repeats;
+            p.shape = pr.shape;
+            p.reverse = pr.reverse;
+            p.unitSamples = divisionBeats[pr.timeDivision] * 0.5 * kSr; // 120 BPM
+            dsp.setEngineParams (p);
+
+            std::vector<float> l (inL.begin(), inL.begin() + (int) kSr * 4), r (inR.begin(), inR.begin() + (int) kSr * 4);
+            l.resize ((size_t) kSr * 30, 0.0f);
+            r.resize ((size_t) kSr * 30, 0.0f);
+            const int len = (int) l.size();
+            for (int s0 = 0; s0 < len; s0 += kBlock)
+                dsp.process (l.data() + s0, r.data() + s0, std::min (kBlock, len - s0));
+
+            auto rmsOf = [&] (int from, int to)
+            {
+                double e = 0;
+                for (int k = from; k < to; ++k)
+                    e += (double) l[(size_t) k] * l[(size_t) k];
+                return (float) std::sqrt (e / (to - from));
+            };
+            float peak = 0.0f;
+            bool finite = true;
+            for (int k = 0; k < len; ++k)
+            {
+                finite = finite && std::isfinite (l[(size_t) k]);
+                peak = std::max (peak, std::abs (l[(size_t) k]));
+            }
+            const float playing = rmsOf ((int) kSr, (int) kSr * 4);
+            const float tail = rmsOf ((int) kSr * 26, (int) kSr * 30);
+            const bool ok = finite && playing > 0.02f && peak < 1.0f && tail < 0.02f;
+            failures += ok ? 0 : 1;
+            std::printf ("preset %-18s playing=%.3f peak=%.2f tail(22s after)=%.4f%s\n", pr.name, playing, peak, tail,
+                         ok ? "" : "  <-- FAIL");
         }
     }
 

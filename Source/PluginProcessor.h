@@ -34,10 +34,10 @@ public:
     bool isMidiEffect() const override { return false; }
     double getTailLengthSeconds() const override { return 20.0; }
 
-    int getNumPrograms() override { return 1; }
-    int getCurrentProgram() override { return 0; }
-    void setCurrentProgram (int) override {}
-    const juce::String getProgramName (int) override { return {}; }
+    int getNumPrograms() override;
+    int getCurrentProgram() override { return currentProgram; }
+    void setCurrentProgram (int index) override;
+    const juce::String getProgramName (int index) override;
     void changeProgramName (int, const juce::String&) override {}
 
     void getStateInformation (juce::MemoryBlock& destData) override;
@@ -63,6 +63,7 @@ private:
     std::atomic<uint32_t> pendingCommands { 0 };
     bool lastRec = false, lastPlay = false, lastUndo = false, lastClear = false;
     juce::AudioBuffer<float> monoScratch;
+    int currentProgram = 0;
 
     struct Raw
     {
@@ -74,6 +75,7 @@ private:
         std::atomic<float>* loopLevel; std::atomic<float>* loopFade; std::atomic<float>* loopPosition;
         std::atomic<float>* loopReverse; std::atomic<float>* loopHalf;
         std::atomic<float>* hold; std::atomic<float>* fxReverse; std::atomic<float>* output;
+        std::atomic<float>* drift;
     } raw {};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MicrocosmProcessor)

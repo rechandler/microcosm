@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include "Presets.h"
 
 MicrocosmProcessor::MicrocosmProcessor()
     : AudioProcessor (BusesProperties()
@@ -12,7 +13,7 @@ MicrocosmProcessor::MicrocosmProcessor()
             p (ParamIDs::shape), p (ParamIDs::time), p (ParamIDs::sync), p (ParamIDs::filter),
             p (ParamIDs::resonance), p (ParamIDs::mix), p (ParamIDs::space), p (ParamIDs::reverbMode),
             p (ParamIDs::loopLevel), p (ParamIDs::loopFade), p (ParamIDs::loopPosition), p (ParamIDs::loopReverse),
-            p (ParamIDs::loopHalf), p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output) };
+            p (ParamIDs::loopHalf), p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output), p (ParamIDs::drift) };
 }
 
 bool MicrocosmProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -104,6 +105,7 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     g.loopPre = raw.loopPosition->load() > 0.5f;
     g.loopReverse = raw.loopReverse->load() > 0.5f;
     g.loopHalfSpeed = raw.loopHalf->load() > 0.5f;
+    g.drift = raw.drift->load();
     g.outputGain = juce::Decibels::decibelsToGain (raw.output->load());
     dsp.setGlobal (g);
 
@@ -148,10 +150,52 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         onsetFlash.store (true);
 }
 
+int MicrocosmProcessor::getNumPrograms()
+{
+    return Presets::count;
+}
+
+const juce::String MicrocosmProcessor::getProgramName (int index)
+{
+    return juce::isPositiveAndBelow (index, Presets::count) ? Presets::list[index].name : "";
+}
+
+void MicrocosmProcessor::setCurrentProgram (int index)
+{
+    if (! juce::isPositiveAndBelow (index, Presets::count))
+        return;
+    currentProgram = index;
+    const auto& pr = Presets::list[index];
+
+    auto set = [this] (const char* id, float value)
+    {
+        if (auto* param = apvts.getParameter (id))
+            param->setValueNotifyingHost (param->convertTo0to1 (value));
+    };
+    set (ParamIDs::algo, (float) pr.algo);
+    set (ParamIDs::variation, (float) pr.variation);
+    set (ParamIDs::activity, pr.activity);
+    set (ParamIDs::repeats, pr.repeats);
+    set (ParamIDs::shape, pr.shape);
+    set (ParamIDs::time, (float) pr.timeDivision / (float) (TimeMapping::numDivisions - 1));
+    set (ParamIDs::sync, 1.0f);
+    set (ParamIDs::filter, pr.filter);
+    set (ParamIDs::resonance, pr.resonance);
+    set (ParamIDs::mix, pr.mix);
+    set (ParamIDs::space, pr.space);
+    set (ParamIDs::reverbMode, (float) pr.reverbMode);
+    set (ParamIDs::drift, pr.drift);
+    set (ParamIDs::fxReverse, pr.reverse ? 1.0f : 0.0f);
+    set (ParamIDs::hold, 0.0f);
+}
+
 void MicrocosmProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
+    // Remember which preset the knobs started from, so a host re-sending the
+    // program number on load doesn't overwrite tweaked settings.
+    xml->setAttribute ("program", currentProgram);
     copyXmlToBinary (*xml, destData);
 }
 
@@ -159,7 +203,22 @@ void MicrocosmProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xml (getXmlFromBinary (data, sizeInBytes));
     if (xml != nullptr && xml->hasTagName (apvts.state.getType()))
+    {
+        currentProgram = juce::jlimit (0, Presets::count - 1, xml->getIntAttribute ("program", 0));
+        xml->removeAttribute ("program");
         apvts.replaceState (juce::ValueTree::fromXml (*xml));
+
+        // replaceState skips parameters whose value looks unchanged (e.g. a
+        // switch already "on"), which can leave a host-set in-between value
+        // behind. Set every parameter explicitly so the restore is exact.
+        for (auto* p : getParameters())
+            if (auto* rp = dynamic_cast<juce::RangedAudioParameter*> (p))
+            {
+                const auto child = apvts.state.getChildWithProperty ("id", rp->paramID);
+                if (child.isValid() && child.hasProperty ("value"))
+                    rp->setValueNotifyingHost (rp->convertTo0to1 ((float) child["value"]));
+            }
+    }
 }
 
 juce::AudioProcessorEditor* MicrocosmProcessor::createEditor()

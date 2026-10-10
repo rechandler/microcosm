@@ -1,6 +1,6 @@
 #pragma once
 
-#include "DspUtil.h"
+#include "PitchShifter.h"
 #include <array>
 #include <vector>
 
@@ -22,8 +22,12 @@ public:
         sr = (float) sampleRate;
         size = nextPowerOfTwo ((int) (sampleRate * maxSeconds));
         mask = size - 1;
-        line[0].assign ((size_t) size, 0.0f);
-        line[1].assign ((size_t) size, 0.0f);
+        for (int c = 0; c < 2; ++c)
+        {
+            line[c].assign ((size_t) size, 0.0f);
+            lineAA[c].assign ((size_t) size, 0.0f);
+            aa[c].setCutoff (0.2f * sr, sr);
+        }
         writePos = 0;
         fbLpCoeff = 1.0f - std::exp (-kTwoPi * 9000.0f / sr);
         fbHpCoeff = 1.0f - std::exp (-kTwoPi * 60.0f / sr);
@@ -32,10 +36,17 @@ public:
 
     void reset()
     {
-        std::fill (line[0].begin(), line[0].end(), 0.0f);
-        std::fill (line[1].begin(), line[1].end(), 0.0f);
+        for (int c = 0; c < 2; ++c)
+        {
+            std::fill (line[c].begin(), line[c].end(), 0.0f);
+            std::fill (lineAA[c].begin(), lineAA[c].end(), 0.0f);
+            aa[c].reset();
+        }
         for (auto& t : taps)
+        {
             t = {};
+            t.shifter.prepare (sr);
+        }
         fbL = fbR = 0.0f;
         fbLpL = fbLpR = fbHpL = fbHpR = 0.0f;
         envFollow = 0.0f;
@@ -76,7 +87,7 @@ public:
         }
 
         const double sixteenth = unitSamples / 4.0;
-        const double maxDelay = (double) size - 4.0 * sr * 0.1 - 8.0;
+        const double maxDelay = (double) size - 0.7 * sr - 8.0; // headroom for pitch-shifter grains
         const float tilt = (shape - 0.5f) * 2.0f; // -1 decaying .. +1 swelling
         float norm = 0.0f;
 
@@ -97,7 +108,7 @@ public:
 
             // WARP processing per tap
             t.ratio = 1.0f;
-            t.grainLen = 0.06f * sr;
+            t.grainLen = 0.09f * sr;
             if (warp)
             {
                 if (variation == 2)
@@ -108,7 +119,7 @@ public:
                 else if (variation == 3)
                 {
                     t.ratio = 2.0f;
-                    t.grainLen = 0.025f * sr;
+                    t.grainLen = 0.045f * sr;
                 }
                 if (variation == 1)
                 {
@@ -204,8 +215,12 @@ public:
         fbR = softClip ((fbLpR - fbHpR) * feedback);
 
         const float inGain = hold ? 0.0f : 1.0f;
-        line[0][(size_t) writePos] = inL * inGain + fbL;
-        line[1][(size_t) writePos] = inR * inGain + fbR;
+        const float wl = inL * inGain + fbL;
+        const float wr = inR * inGain + fbR;
+        line[0][(size_t) writePos] = wl;
+        line[1][(size_t) writePos] = wr;
+        lineAA[0][(size_t) writePos] = aa[0].process (wl);
+        lineAA[1][(size_t) writePos] = aa[1].process (wr);
         writePos = (writePos + 1) & mask;
 
         outL = sumL * outNorm;
@@ -217,42 +232,36 @@ private:
     {
         double targetDelay = 0.0, delay = 0.0;
         float gain = 0.0f, pan = 0.0f, panL = 1.0f, panR = 1.0f;
-        float ratio = 1.0f, grainLen = 2880.0f, grainPhase = 0.0f;
+        float ratio = 1.0f, grainLen = 2880.0f;
+        PitchShifter shifter;
         Svf svf[2];
         int filterCounter = 0;
     };
 
-    float readLine (int ch, double delay) const
+    float readLine (int ch, double delay, bool bandLimited = false) const
     {
         const double pos = (double) writePos - std::max (1.0, delay);
         const double fl = std::floor (pos);
         const int i = (int) (int64_t) fl;
         const float t = (float) (pos - fl);
-        const float* d = line[ch].data();
+        const float* d = bandLimited ? lineAA[ch].data() : line[ch].data();
         return hermite (d[(i - 1) & mask], d[i & mask], d[(i + 1) & mask], d[(i + 2) & mask], t);
     }
 
-    // Two overlapping grains sweeping through the delay line produce a
-    // pitch-shifted tap without needing a separate buffer.
+    // Pitched taps use a WSOLA-aligned grain shifter reading straight from
+    // the delay line; pitching up reads the band-limited copy.
     void readPitched (Tap& t, float& l, float& r)
     {
-        const float len = t.grainLen;
-        t.grainPhase += (1.0f - t.ratio);
-        while (t.grainPhase >= len) t.grainPhase -= len;
-        while (t.grainPhase < 0.0f) t.grainPhase += len;
-
-        float p2 = t.grainPhase + 0.5f * len;
-        if (p2 >= len) p2 -= len;
-
-        const float w1 = std::sin (kPi * t.grainPhase / len);
-        const float w2 = std::sin (kPi * p2 / len);
-        const double d1 = t.delay + t.grainPhase;
-        const double d2 = t.delay + p2;
-        l = readLine (0, d1) * w1 * w1 + readLine (0, d2) * w2 * w2;
-        r = readLine (1, d1) * w1 * w1 + readLine (1, d2) * w2 * w2;
+        t.shifter.setRatio (t.ratio);
+        t.shifter.setGrainLength (t.grainLen);
+        t.shifter.setBaseDelay ((float) t.delay);
+        const bool bandLimited = std::abs (t.ratio) > 1.2f;
+        const auto& src = bandLimited ? lineAA : line;
+        t.shifter.process (src[0].data(), src[1].data(), mask, (writePos - 1) & mask, l, r);
     }
 
-    std::vector<float> line[2];
+    std::vector<float> line[2], lineAA[2];
+    AntiAliasFilter aa[2];
     int size = 1, mask = 0, writePos = 0;
     float sr = 48000.0f;
     std::array<Tap, kMaxTaps> taps {};

@@ -74,6 +74,7 @@ public:
                        ? std::pow (p.speedEnd / p.speed, 1.0 / p.life)
                        : 1.0;
         phase = speed >= 0.0 ? 0.0 : prm.segLen;
+        level = HistoryBuffer::levelForSpeed (std::max (std::abs (p.speed), std::abs (p.speedEnd)));
         const float angle = (prm.pan + 1.0f) * 0.25f * kPi;
         gainL = prm.gain * std::cos (angle);
         gainR = prm.gain * std::sin (angle);
@@ -164,8 +165,8 @@ private:
     void readFrame (const HistoryBuffer& hb, float& l, float& r) const
     {
         const double pos = prm.segStart + phase;
-        l = hb.read (0, pos);
-        r = hb.read (1, pos);
+        l = hb.read (level, 0, pos);
+        r = hb.read (level, 1, pos);
 
         if (prm.loop && prm.xfade > 0.0f)
         {
@@ -179,8 +180,8 @@ private:
                 const float g1 = std::sin (0.5f * kPi * w);
                 const float g0 = std::cos (0.5f * kPi * w);
                 const double pos2 = pos - prm.segLen;
-                l = l * g0 + hb.read (0, pos2) * g1;
-                r = r * g0 + hb.read (1, pos2) * g1;
+                l = l * g0 + hb.read (level, 0, pos2) * g1;
+                r = r * g0 + hb.read (level, 1, pos2) * g1;
             }
         }
     }
@@ -210,6 +211,7 @@ private:
     bool active = false;
     double age = 0.0, phase = 0.0, speed = 1.0, glideMul = 1.0, edgeFade = 144.0;
     int delay = 0;
+    int level = 0;
     float gainL = 0.0f, gainR = 0.0f;
     Svf svf[2];
     int filterCounter = 0;

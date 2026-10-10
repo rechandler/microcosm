@@ -7,7 +7,8 @@ plus a standalone app. Both load in Ableton Live.
 ![Macrocosm UI](docs/screenshot.png)
 
 > Not affiliated with or endorsed by Hologram Electronics. "Microcosm" is their trademark. This project is an
-> independent re-creation of the effect's concept, so it ships under a different name.
+> independent re-creation of the effect's concept, so it ships under a different name. It also deliberately goes further
+> than the pedal in places, with Shimmer and Cathedral reverbs, Drift and factory presets, for cinematic textures.
 
 ## Install in Ableton Live
 
@@ -56,10 +57,24 @@ Strum, Arp and Tunnel react to note onsets in your playing. A detector picks up 
 | **Time** | The rhythmic unit. With **Sync** on it is a note value locked to Live's tempo and grid (1/32 … 1 bar). With Sync off it is a free time (50 ms – 2 s). |
 | **Filter** | Centre is open. Left is a low-pass, right is a high-pass. **Resonance** sets the peak. Applies to the effect only. |
 | **Mix** | Dry/wet. At the centre both are at full level, as on the pedal. |
-| **Space** | Reverb amount. **Reverb** mode: Bright Room, Dark Medium, Large Hall, Ambient. |
+| **Space** | Reverb amount. **Reverb** mode: Bright Room, Dark Medium, Large Hall, Ambient, plus **Shimmer** (octave-up pitch shifting inside the reverb, so the tail keeps rising) and **Cathedral** (huge and long). |
+| **Drift** | Tape-style wow, flutter and slow pitch wander on the effect, slightly different per side. Around 15–40% gives gentle movement; higher gives lo-fi warble. |
 | **Hold** | Freezes the audio the effect is working on, so it keeps generating from what you just played while you play over it. In the delays it becomes an infinite repeat. |
 | **Reverse** | Plays every loop, grain and tap backwards. |
 | **Output** | Output trim (dB). |
+
+### Factory presets
+
+Pick these from the **Preset** menu at the top of the plugin, or from Live's program list. They're cinematic starting points for guitar:
+Shimmer Cathedral, Frozen Swell, Reverse Bloom, Granular Choir, Tape Memory, Octave Clouds, Rising Tide, Ghost Echoes,
+Crystal Arp, Distant Signal and Infinite Pad. Choosing one sets the effect and sound controls; the looper is left alone.
+
+### Sound quality notes
+
+- Loops, grains and echoes that play faster than normal (octave-up) read from band-limited copies of the audio, so they
+  don't alias into harsh, fizzy tones.
+- Pitch-shifted echoes (Warp C/D) and the Shimmer reverb use a grain pitch shifter that lines up each new grain with
+  the waveform it crossfades into. That way sustained notes shift cleanly without the dropouts and warble of a basic shifter.
 
 ### Looper (60 s, stereo)
 
@@ -116,10 +131,13 @@ Source/
     Voice.h         micro-loop / grain playback head (glide, filter, crush, envelopes)
     HistoryBuffer.h 32 s input recorder that loops and grains read from (frozen by Hold)
     MultiTap.h      Pattern / Warp multi-tap delay with per-tap processing
-    Reverb.h        8-line FDN reverb, 4 modes
+    Reverb.h        8-line FDN reverb, 6 modes incl. Shimmer
+    PitchShifter.h  WSOLA-aligned grain pitch shifter (Warp, Shimmer)
+    Drift.h         tape wow/flutter on the effect signal
     Looper.h        phrase looper with undo/redo
     MicrocosmDsp.h  full signal chain
   Parameters.h    parameter IDs and layout
+  Presets.h       factory presets
   PluginProcessor.*, PluginEditor.*  JUCE wrapper and UI
 tests/DspTest.cpp
 ```

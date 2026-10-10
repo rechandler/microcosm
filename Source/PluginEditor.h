@@ -51,7 +51,9 @@ private:
     MicrocosmLookAndFeel lnf;
 
     Knob activity, repeats, shape, time, filter, mix, space, loopLevel;
-    Knob resonance, loopFade, output;
+    Knob resonance, drift, loopFade, output;
+    juce::ComboBox presetBox;
+    juce::Label presetLabel;
 
     juce::ComboBox reverbMode, loopPosition;
     juce::Label reverbLabel, loopPosLabel;

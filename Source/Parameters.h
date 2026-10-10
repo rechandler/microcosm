@@ -26,6 +26,7 @@ inline constexpr const char* loopHalf     = "loopHalf";
 inline constexpr const char* hold         = "hold";
 inline constexpr const char* fxReverse    = "fxReverse";
 inline constexpr const char* output       = "output";
+inline constexpr const char* drift        = "drift";
 // Momentary looper triggers (rising edge), so they can be MIDI-mapped in a DAW.
 inline constexpr const char* loopRec      = "loopRec";
 inline constexpr const char* loopPlay     = "loopPlay";
@@ -101,6 +102,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
             return String ("Open");
         })));
     knob (ParamIDs::resonance, "Resonance", 0.2f);
+    knob (ParamIDs::drift, "Drift", 0.0f);
     knob (ParamIDs::mix, "Mix", 0.5f);
     knob (ParamIDs::space, "Space", 0.25f);
 

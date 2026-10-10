@@ -2,16 +2,17 @@
 
 #include "Engine.h"
 #include "Looper.h"
+#include "Drift.h"
 #include "Reverb.h"
 
 namespace mc
 {
 // Complete signal chain, independent of any plugin framework:
 //
-//   in ─┬─────────────────────────────── dry ──┐
-//       │                                       ├─ MIX ─ SPACE ─┬─ out
-//       └─ ENGINE (11 algos) ─ FILTER ── wet ──┘                │
-//                                                   LOOPER ─────┘ (post)
+//   in ─┬──────────────────────────────── dry ──┐
+//       │                                        ├─ MIX ─ SPACE ─┬─ out
+//       └─ ENGINE (11 algos) ─ DRIFT ─ FILTER ─ wet ┘               │
+//                                                    LOOPER ─────┘ (post)
 //
 // With the looper in "pre" position the loop is recorded from the input and
 // its playback is fed into the effects instead.
@@ -28,6 +29,7 @@ public:
         float loopLevel = 0.8f;
         bool loopPre = false;
         float loopFadeSeconds = 1.0f;
+        float drift = 0.0f;      // tape wow/flutter on the effect signal
         bool loopReverse = false;
         bool loopHalfSpeed = false;
         float outputGain = 1.0f; // linear
@@ -38,6 +40,7 @@ public:
         sr = (float) sampleRate;
         blockSize = std::max (16, maxBlockSize);
         engine.prepare (sampleRate);
+        drift.prepare (sampleRate);
         reverb.prepare (sampleRate);
         looper.prepare (sampleRate, 60.0);
         for (auto* v : { &wetL, &wetR, &duck, &dryL, &dryR })
@@ -133,6 +136,7 @@ private:
             }
 
             float wl = wetL[(size_t) i], wr = wetR[(size_t) i];
+            drift.process (wl, wr, g.drift);
             if (filterMode != Bypass)
             {
                 const auto type = filterMode == Low ? Svf::LowPass : Svf::HighPass;
@@ -209,6 +213,7 @@ private:
     int blockSize = 512;
     Global g;
     Engine engine;
+    Drift drift;
     Reverb reverb;
     Looper looper;
     Svf svf[2];
