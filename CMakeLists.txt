@@ -64,6 +64,12 @@ target_link_libraries(Macrocosm
         juce::juce_recommended_lto_flags
         juce::juce_recommended_warning_flags)
 
+if(MSVC)
+    # Keep symbols for Release builds so crash reports have readable stacks.
+    target_compile_options(Macrocosm PRIVATE $<$<CONFIG:Release>:/Zi>)
+    target_link_options(Macrocosm PUBLIC $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
+endif()
+
 if(MACROCOSM_BUILD_TESTS)
     enable_testing()
     add_executable(DspTest tests/DspTest.cpp)
