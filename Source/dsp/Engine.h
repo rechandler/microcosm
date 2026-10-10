@@ -592,7 +592,16 @@ private:
                 p.speed = (v == 3 && (chainIndex % 2 == 1)) ? 2.0 : 1.0;
                 p.speedEnd = p.speed;
                 p.segStart = src;
-                p.segLen = std::min ({ step * 0.95 * p.speed, now - src - 2.0, 0.5 * sr });
+
+                // Each repeat overlaps the next a little so the chain flows
+                // instead of leaving gaps between repeats. Wait (without using
+                // up a step) until enough of a fresh note has been recorded,
+                // rather than firing a truncated blip just after the attack.
+                const double wanted = std::min (step * 1.3 * p.speed, 0.6 * sr);
+                const double recorded = now - src - 2.0;
+                if (! prm.hold && recorded < 0.7 * wanted)
+                    break;
+                p.segLen = std::min (wanted, recorded);
                 if (p.segLen > 0.01 * sr)
                 {
                     p.loop = false;
