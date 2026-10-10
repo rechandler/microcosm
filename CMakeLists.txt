@@ -23,7 +23,6 @@ FetchContent_Declare(JUCE
 FetchContent_MakeAvailable(JUCE)
 
 option(MACROCOSM_BUILD_TESTS "Build the headless DSP test" ON)
-option(MACROCOSM_BUILD_CANARY "Build a minimal pass-through plugin for CI diagnostics" OFF)
 
 set(MACROCOSM_FORMATS VST3 Standalone)
 if(APPLE)
@@ -77,17 +76,3 @@ if(MACROCOSM_BUILD_TESTS)
     add_test(NAME DspTest COMMAND DspTest)
 endif()
 
-if(MACROCOSM_BUILD_CANARY)
-    juce_add_plugin(Canary
-        PRODUCT_NAME "Canary"
-        COMPANY_NAME "Macrocosm Audio"
-        PLUGIN_MANUFACTURER_CODE Mcra
-        BUNDLE_ID "com.macrocosmaudio.canary"
-        PLUGIN_CODE Cnry
-        FORMATS VST3
-        COPY_PLUGIN_AFTER_BUILD FALSE)
-    target_sources(Canary PRIVATE tests/canary/Canary.cpp)
-    target_compile_definitions(Canary PUBLIC JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0 JUCE_VST3_CAN_REPLACE_VST2=0)
-    target_link_libraries(Canary PRIVATE juce::juce_audio_utils
-        PUBLIC juce::juce_recommended_config_flags juce::juce_recommended_lto_flags)
-endif()

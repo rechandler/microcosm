@@ -38,29 +38,13 @@ jobs:
         run: |
           Invoke-WebRequest https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip -OutFile pluginval.zip
           Expand-Archive pluginval.zip -DestinationPath pluginval
-          New-Item -ItemType Directory -Force pluginval-logs | Out-Null
-          # GitHub's Windows runners have no GPU; editor tests are run separately below.
-          .\pluginval\pluginval.exe --strictness-level 8 --timeout-ms 600000 --skip-gui-tests --output-dir pluginval-logs "build\Macrocosm_artefacts\Release\VST3\Macrocosm.vst3"
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-      - name: pluginval canary (diagnostic)
-        if: failure()
-        shell: pwsh
-        run: |
-          cmake -B build -DMACROCOSM_BUILD_CANARY=ON
-          cmake --build build --config Release --target Canary_VST3 --parallel
-          .\pluginval\pluginval.exe --strictness-level 8 --timeout-ms 600000 --skip-gui-tests "build\Canary_artefacts\Release\VST3\Canary.vst3"
-          Write-Host "Canary pluginval exit code: $LASTEXITCODE"
-      - name: pluginval editor tests (informational)
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          .\pluginval\pluginval.exe --strictness-level 8 --timeout-ms 600000 "build\Macrocosm_artefacts\Release\VST3\Macrocosm.vst3"
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: pluginval-logs-windows
-          path: pluginval-logs
+          # pluginval.exe is a GUI-subsystem app: PowerShell doesn't wait for it or
+          # set $LASTEXITCODE unless it is started with -Wait.
+          $p = Start-Process -FilePath .\pluginval\pluginval.exe -NoNewWindow -Wait -PassThru -ArgumentList @(
+            "--strictness-level", "8", "--timeout-ms", "600000",
+            "build\Macrocosm_artefacts\Release\VST3\Macrocosm.vst3")
+          Write-Host "pluginval exit code: $($p.ExitCode)"
+          exit $p.ExitCode
 
   macos:
     name: macOS (VST3 + AU, Universal)
