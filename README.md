@@ -81,9 +81,9 @@ saved with your Live set. Loop audio is not saved.
 
 Requirements: CMake 3.22+ and a C++17 compiler. JUCE 8 is downloaded automatically.
 
-**Windows** (Visual Studio 2022 with "Desktop development with C++"):
+**Windows** (Visual Studio 2022 or newer with "Desktop development with C++"):
 ```
-cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake -B build -A x64
 cmake --build build --config Release
 ```
 The plugin is written to `build\Macrocosm_artefacts\Release\VST3\Macrocosm.vst3`.
