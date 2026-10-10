@@ -178,6 +178,37 @@ int main()
                      ok ? "" : "  <-- FAIL");
     }
 
+    // Nothing may self-oscillate: 10 s after the input stops, every effect at
+    // Repeats 70% must have died down (no howling feedback, no endless loops).
+    for (int a = 0; a < Engine::NumAlgos; ++a)
+    {
+        for (int v = 0; v < 4; ++v)
+        {
+            MicrocosmDsp dsp;
+            dsp.prepare (kSr, kBlock);
+            MicrocosmDsp::Global g;
+            g.mix = 1.0f;
+            g.space = 0.0f;
+            dsp.setGlobal (g);
+            Engine::Params p;
+            p.algo = a;
+            p.variation = v;
+            p.activity = 0.0f;
+            p.repeats = 0.7f;
+            p.unitSamples = kSr * 2.0; // TIME = 1 bar at 120 BPM
+            dsp.setEngineParams (p);
+            std::vector<float> l (inL.begin(), inL.begin() + (int) kSr * 3), r (inR.begin(), inR.begin() + (int) kSr * 3);
+            l.resize ((size_t) kSr * 16, 0.0f);
+            r.resize ((size_t) kSr * 16, 0.0f);
+            const auto st = run (dsp, l, r, (int) kSr * 13);
+            if (st.peak > 0.5f)
+            {
+                ++failures;
+                std::printf ("runaway %s %c: tail peak %.3f  <-- FAIL\n", Engine::algoName (a), 'A' + v, st.peak);
+            }
+        }
+    }
+
     // Looper: record 2 s, play back over silence.
     {
         MicrocosmDsp dsp;

@@ -299,6 +299,10 @@ private:
         v->start (p, sr);
     }
 
+    // Longest a loop or sequence may keep repeating, regardless of TIME, so
+    // long TIME settings don't leave loops playing long after you stop.
+    double maxLifeSeconds (float R) const { return lerp (1.5, 12.0, (double) R) * sr; }
+
     double lifeClamp (double samples) const { return std::min (samples, 20.0 * (double) sr); }
 
     // ---------------------------------------------------------------------
@@ -330,7 +334,7 @@ private:
                 }
                 p.speedEnd = p.speed;
                 p.segStart = now - p.segLen - rng.integer (4) * U * 0.25;
-                p.life = lifeClamp (U * lerp (1.0, 12.0, (double) R) * rng.uniform (0.75f, 1.25f));
+                p.life = std::min (U * lerp (1.0, 12.0, (double) R), maxLifeSeconds (R)) * rng.uniform (0.75f, 1.25f);
                 p.loop = true;
                 p.xfade = 0.06f;
                 p.gain = 0.55f;
@@ -353,7 +357,8 @@ private:
                         seqCaptureStart = now - 8.0 * step;
                         for (int k = 0; k < 8; ++k)
                             seqPattern[(size_t) k] = rng.chance (0.35f) ? k : rng.integer (8);
-                        seqCyclesLeft = 1 + (int) std::round (R * 15.0f);
+                        seqCyclesLeft = std::max (1, std::min (1 + (int) std::round (R * 15.0f),
+                                                          (int) (maxLifeSeconds (R) / (8.0 * step))));
                         seqCaptured = true;
                     }
                 }
@@ -429,7 +434,7 @@ private:
                     }
                 }
                 p.segStart = now - p.segLen - rng.integer (2) * U * 0.25;
-                p.life = lifeClamp (U * lerp (1.0, 16.0, (double) R));
+                p.life = std::min (U * lerp (1.0, 16.0, (double) R), maxLifeSeconds (R));
                 p.loop = true;
                 p.xfade = 0.1f;
                 p.gain = 0.95f;
@@ -541,7 +546,7 @@ private:
                     }
                 }
                 p.speedEnd = p.speed;
-                p.life = lifeClamp (lerp (1.5, 20.0, std::pow ((double) R, 1.2)) * sr);
+                p.life = lifeClamp (lerp (1.0, 16.0, std::pow ((double) R, 1.5)) * sr);
                 p.loop = true;
                 p.xfade = 0.5f;
                 p.gain = v == 2 ? 1.5f : 0.5f;

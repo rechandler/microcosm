@@ -25,6 +25,8 @@ public:
         line[0].assign ((size_t) size, 0.0f);
         line[1].assign ((size_t) size, 0.0f);
         writePos = 0;
+        fbLpCoeff = 1.0f - std::exp (-kTwoPi * 9000.0f / sr);
+        fbHpCoeff = 1.0f - std::exp (-kTwoPi * 60.0f / sr);
         reset();
     }
 
@@ -35,6 +37,7 @@ public:
         for (auto& t : taps)
             t = {};
         fbL = fbR = 0.0f;
+        fbLpL = fbLpR = fbHpL = fbHpR = 0.0f;
         envFollow = 0.0f;
     }
 
@@ -153,6 +156,14 @@ public:
                 readPitched (t, l, r);
             }
 
+            // Feed back the tap before WARP's filters: resonant filters
+            // inside the loop push its gain above 1 and make it howl.
+            if (i == lastTap)
+            {
+                fbTapL = l;
+                fbTapR = r;
+            }
+
             if (warp)
             {
                 if (variation == 0)
@@ -162,8 +173,8 @@ public:
                         t.filterCounter = 16;
                         const float sens = 0.6f + 0.25f * (float) i;
                         const float fc = 180.0f + 9000.0f * std::min (1.0f, envFollow * 4.0f * sens);
-                        t.svf[0].setParams (fc, 4.0f, sr);
-                        t.svf[1].setParams (fc, 4.0f, sr);
+                        t.svf[0].setParams (fc, 2.5f, sr);
+                        t.svf[1].setParams (fc, 2.5f, sr);
                     }
                     l = t.svf[0].process (l, Svf::LowPass);
                     r = t.svf[1].process (r, Svf::LowPass);
@@ -181,16 +192,16 @@ public:
             // keep some of the original stereo image
             sumL += t.gain * (0.5f * l + 0.5f * pl);
             sumR += t.gain * (0.5f * r + 0.5f * pr);
-
-            if (i == lastTap)
-            {
-                fbTapL = l;
-                fbTapR = r;
-            }
         }
 
-        fbL = softClip (fbTapL * feedback);
-        fbR = softClip (fbTapR * feedback);
+        // Damp the feedback path: a low cut stops rumble building up and a
+        // high cut keeps repeated octave-up passes from turning into fizz.
+        fbLpL += fbLpCoeff * (fbTapL - fbLpL);
+        fbLpR += fbLpCoeff * (fbTapR - fbLpR);
+        fbHpL += fbHpCoeff * (fbLpL - fbHpL);
+        fbHpR += fbHpCoeff * (fbLpR - fbHpR);
+        fbL = softClip ((fbLpL - fbHpL) * feedback);
+        fbR = softClip ((fbLpR - fbHpR) * feedback);
 
         const float inGain = hold ? 0.0f : 1.0f;
         line[0][(size_t) writePos] = inL * inGain + fbL;
@@ -248,5 +259,6 @@ private:
     int numTaps = 1, lastTap = 0, variation = 0;
     bool warp = false, hold = false, reversed = false;
     float feedback = 0.0f, fbL = 0.0f, fbR = 0.0f, outNorm = 1.0f, envFollow = 0.0f;
+    float fbLpL = 0.0f, fbLpR = 0.0f, fbHpL = 0.0f, fbHpR = 0.0f, fbLpCoeff = 0.5f, fbHpCoeff = 0.01f;
 };
 } // namespace mc
