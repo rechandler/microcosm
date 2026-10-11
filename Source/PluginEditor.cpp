@@ -251,7 +251,7 @@ void MicrocosmEditor::paint (Graphics& g)
     // family labels
     g.setFont (FontOptions (11.0f, Font::bold));
     g.setColour (MicrocosmLookAndFeel::dim());
-    static const char* families[] = { "MICRO LOOP", "GRANULES", "GLITCH", "MULTIDELAY" };
+    static const char* families[] = { "LOOPS", "GRAINS", "GLITCHES", "ECHOES" };
     for (int row = 0; row < 4; ++row)
     {
         const auto* b = algoButtons[row * 3];
@@ -495,7 +495,7 @@ void EngineView::paint (Graphics& g)
     }
 
     // grain / loop heads: x = where in the past they read, y = pitch.
-    // Heads reading from further back than the view (e.g. Seq replaying an
+    // Heads reading from further back than the view (e.g. Shuffle replaying an
     // older capture) are counted at the left edge instead of piling up there.
     const int nv = proc.copyVoices (voices);
     int older = 0;

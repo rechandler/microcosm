@@ -22,24 +22,25 @@ public:
     {
         Mosaic = 0, Seq, Glide,          // Micro Loop
         Haze, Tunnel, Strum,             // Granules
-        Blocks, Interrupt, Arp,          // Glitch
+        Blocks, Interrupt, Arp,          // Glitches
         Pattern, Warp,                   // Multidelay
         NumAlgos
     };
 
     static const char* algoName (int a)
     {
-        static const char* names[NumAlgos] = { "Mosaic", "Seq", "Glide", "Haze", "Tunnel", "Strum",
-                                               "Blocks", "Interrupt", "Arp", "Pattern", "Warp" };
+        // Display names. (The enum keeps the original internal names.)
+        static const char* names[NumAlgos] = { "Facets", "Shuffle", "Bend", "Mist", "Drone", "Ripple",
+                                               "Chop", "Cutout", "Arp", "Rhythm", "Prism" };
         return names[std::min (std::max (a, 0), NumAlgos - 1)];
     }
 
     static const char* familyName (int a)
     {
-        if (a <= Glide) return "Micro Loop";
-        if (a <= Strum) return "Granules";
-        if (a <= Arp) return "Glitch";
-        return "Multidelay";
+        if (a <= Glide) return "Loops";
+        if (a <= Strum) return "Grains";
+        if (a <= Arp) return "Glitches";
+        return "Echoes";
     }
 
     // Short display name for each algorithm's four variations ("styles").

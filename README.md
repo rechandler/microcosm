@@ -10,12 +10,6 @@ plus a standalone app. Both load in Ableton Live.
 > independent re-creation of the effect's concept, so it ships under a different name. It also deliberately goes further
 > than the pedal in places, with Shimmer and Cathedral reverbs, Drift and factory presets, for cinematic textures.
 
-## Upgrading from Macrocosm
-
-Tessera was released as **Macrocosm** (v1.0.0). It is a new plugin as far as Live is concerned: delete the old
-`Macrocosm.vst3` (and `Macrocosm.component` on a Mac), install Tessera, rescan, and add Tessera to your tracks again.
-Sets saved with Macrocosm won't restore their settings into Tessera.
-
 ## Install in Ableton Live
 
 ### Windows
@@ -39,19 +33,19 @@ Eleven effects in four families. Each has four **styles**, for 44 sounds in tota
 
 | Family | Effect | What it does | Styles |
 |---|---|---|---|
-| Micro Loop | **Mosaic** | Overlapping micro-loops at different speeds | Octave Up, Octave Down, Mirror (some reversed), Chaos |
-| | **Seq** | Recent audio sliced and re-sequenced | Filtered, Sub (half speed), Sweep (filter sweeps), Lo-Fi |
-| | **Glide** | Loops whose pitch glides | Rise (½× → 1×), Fall (2× → ½×), Ascend (1× → 2×), Wander |
-| Granules | **Haze** | Smeared grain clouds | Smear, Sparkle (+octave), Deep (−octave), Rewind (reversed) |
-| | **Tunnel** | Drones from cyclical micro-loops | Breathe, Abyss (octave down), Resonant, Halo (+octave) |
-| | **Strum** | Rhythmic chains of recent notes | Repeat, Phase, Cascade, Spiral (cascade + octave) |
-| Glitch | **Blocks** | Rearranged, stuttered blocks | Burst, Pitched, Soft, Crushed |
-| | **Interrupt** | Bursts that *replace* the dry signal | Cut, Pitch, Sweep, Crush |
+| Loops | **Facets** | Overlapping micro-loops at different speeds | Octave Up, Octave Down, Mirror (some reversed), Chaos |
+| | **Shuffle** | Recent audio sliced and re-sequenced | Filtered, Sub (half speed), Sweep (filter sweeps), Lo-Fi |
+| | **Bend** | Loops whose pitch glides | Rise (½× → 1×), Fall (2× → ½×), Ascend (1× → 2×), Wander |
+| Grains | **Mist** | Smeared grain clouds | Smear, Sparkle (+octave), Deep (−octave), Rewind (reversed) |
+| | **Drone** | Drones from cyclical micro-loops | Breathe, Abyss (octave down), Resonant, Halo (+octave) |
+| | **Ripple** | Rhythmic chains of recent notes | Repeat, Phase, Cascade, Spiral (cascade + octave) |
+| Glitches | **Chop** | Rearranged, stuttered blocks | Burst, Pitched, Soft, Crushed |
+| | **Cutout** | Bursts that *replace* the dry signal | Cut, Pitch, Sweep, Crush |
 | | **Arp** | Each note becomes an arpeggio | Octaves, Triads, Steps (filter), Crushed |
-| Multidelay | **Pattern** | Rhythmic multi-tap delay | Straight, Syncopated, Clusters, Triplets |
-| | **Warp** | Multi-tap delay with processed taps | Envelope, Resonant, Shimmer (pitched), Octave |
+| Echoes | **Rhythm** | Rhythmic multi-tap delay | Straight, Syncopated, Clusters, Triplets |
+| | **Prism** | Multi-tap delay with processed taps | Envelope, Resonant, Shimmer (pitched), Octave |
 
-Strum, Arp and Tunnel react to note onsets in your playing. A detector picks up each new attack.
+Ripple, Arp and Drone react to note onsets in your playing. A detector picks up each new attack.
 
 ### Controls
 
@@ -59,7 +53,7 @@ Strum, Arp and Tunnel react to note onsets in your playing. A detector picks up 
 |---|---|
 | **Activity** | Density: how many loops, grains, slices or taps are active. Also how busy the glitches are. |
 | **Repeats** | Duration: loop lifespan, drone decay, number of strums or arp steps, delay feedback. |
-| **Shape** | Volume contour of each event: percussive (left), flat (centre), swelling (right). In Pattern/Warp it contours how each note feeds the echoes (plucky ↔ swelling) and tilts the tap levels. |
+| **Shape** | Volume contour of each event: percussive (left), flat (centre), swelling (right). In Rhythm/Prism it contours how each note feeds the echoes (plucky ↔ swelling) and tilts the tap levels. |
 | **Time** | The rhythmic unit. With **Sync** on it is a note value locked to Live's tempo and grid (1/32 … 1 bar). With Sync off it is a free time (50 ms – 2 s). |
 | **Filter** | Centre is open. Left is a low-pass, right is a high-pass. **Resonance** sets the peak. Applies to the effect only. |
 | **Mix** | Dry/wet. At the centre both are at full level, as on the pedal. |
@@ -80,7 +74,7 @@ Crystal Arp, Distant Signal, Infinite Pad, Cloud Choir (reverb before the effect
 
 - Loops, grains and echoes that play faster than normal (octave-up) read from band-limited copies of the audio, so they
   don't alias into harsh, fizzy tones.
-- Pitch-shifted echoes (Warp C/D) and the Shimmer reverb use a grain pitch shifter that lines up each new grain with
+- Pitch-shifted echoes (Prism Shimmer/Octave) and the Shimmer reverb use a grain pitch shifter that lines up each new grain with
   the waveform it crossfades into. That way sustained notes shift cleanly without the dropouts and warble of a basic shifter.
 
 ### Engine View
@@ -92,9 +86,9 @@ The panel at the bottom right shows what the engine is doing in real time:
   - Colour shows pitch: warm for octave up, teal for normal, blue for octave down. Height shows pitch too.
   - Size and brightness show how loud it is.
   - A ring instead of a filled dot means it is playing in reverse.
-- **"◀ N older":** heads reading from further back than 8 seconds, e.g. Seq replaying an older captured phrase, are
-  counted at the left edge. Seq grabs a fresh phrase every 1 to ~16 cycles depending on Repeats (capped at about 12 s).
-- **Echo markers:** for Pattern and Warp, one marker per echo tap at its delay time, sized by level.
+- **"◀ N older":** heads reading from further back than 8 seconds, e.g. Shuffle replaying an older captured phrase, are
+  counted at the left edge. Shuffle grabs a fresh phrase every 1 to ~16 cycles depending on Repeats (capped at about 12 s).
+- **Echo markers:** for Rhythm and Prism, one marker per echo tap at its delay time, sized by level.
 - **Hold:** with Hold on, the view freezes along with the audio.
 
 All parameters are automatable and can be MIDI-mapped in Live, and state is saved with your Live set.
@@ -137,9 +131,9 @@ Source/
     Engine.h        the 11 algorithms + scheduler, onset detection, clock
     Voice.h         micro-loop / grain playback head (glide, filter, crush, envelopes)
     HistoryBuffer.h 32 s input recorder that loops and grains read from (frozen by Hold)
-    MultiTap.h      Pattern / Warp multi-tap delay with per-tap processing
+    MultiTap.h      Rhythm / Prism multi-tap delay with per-tap processing
     Reverb.h        8-line FDN reverb, 6 modes incl. Shimmer
-    PitchShifter.h  WSOLA-aligned grain pitch shifter (Warp, Shimmer)
+    PitchShifter.h  WSOLA-aligned grain pitch shifter (Prism, Shimmer)
     Drift.h         tape wow/flutter on the effect signal
     MicrocosmDsp.h  full signal chain
   Parameters.h    parameter IDs and layout
