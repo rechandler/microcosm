@@ -140,6 +140,18 @@ public:
         lastTap = numTaps - 1;
     }
 
+    // For the visualizer: each active tap's delay (seconds) and level.
+    int snapshotTaps (float* delaySeconds, float* levels, int maxTaps) const
+    {
+        const int n = std::min (numTaps, maxTaps);
+        for (int i = 0; i < n; ++i)
+        {
+            delaySeconds[i] = (float) (taps[(size_t) i].delay / sr);
+            levels[i] = taps[(size_t) i].gain * outNorm;
+        }
+        return n;
+    }
+
     void process (float inL, float inR, float& outL, float& outR)
     {
         // Input envelope for WARP A (envelope filters).

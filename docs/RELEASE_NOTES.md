@@ -1,4 +1,4 @@
-Macrocosm is a granular, micro-loop, glitch and multidelay effect with a phrase looper, inspired by the Hologram Microcosm and tuned for cinematic guitar textures.
+Macrocosm is a granular, micro-loop, glitch and multidelay effect, inspired by the Hologram Microcosm and tuned for cinematic guitar textures.
 
 ## Downloads
 
@@ -23,7 +23,7 @@ Macrocosm is a granular, micro-loop, glitch and multidelay effect with a phrase 
 - **Filter, Mix and Space**, with six reverbs: Bright Room, Dark Medium, Large Hall, Ambient, **Shimmer** and **Cathedral**.
 - **Drift:** tape-style wow and flutter on the effect sound.
 - **Hold** (freeze) and **Reverse**.
-- **60-second looper** with overdub, undo/redo, reverse, half speed, fade-out and pre/post position. The looper buttons can be MIDI-mapped.
+- **Engine View:** a live display of your playing, the effect output, every active loop and grain (by position, pitch and level) and the delay taps.
 - **12 factory presets**, including Shimmer Cathedral, Frozen Swell, Reverse Bloom, Granular Choir and Infinite Pad.
 - **Clean octave-up:**
   - Band-limited playback means pitched-up loops and grains don't alias.

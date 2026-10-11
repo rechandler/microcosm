@@ -92,6 +92,13 @@ public:
 
     void stop() { active = false; }
     float currentEnvelope() const { return lastEnv; }
+
+    // For the visualizer: where in the history this head is reading, how
+    // loud it is right now, and its playback speed.
+    double readPosition() const { return prm.segStart + phase; }
+    float currentLevel() const { return lastEnv * prm.gain; }
+    double currentSpeed() const { return speed; }
+    bool isWaiting() const { return delay > 0; }
     bool ducksDry() const { return prm.ducksDry; }
 
     // Renders one sample, accumulating into outL/outR.

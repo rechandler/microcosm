@@ -12,8 +12,7 @@ MicrocosmProcessor::MicrocosmProcessor()
     raw = { p (ParamIDs::algo), p (ParamIDs::variation), p (ParamIDs::activity), p (ParamIDs::repeats),
             p (ParamIDs::shape), p (ParamIDs::time), p (ParamIDs::sync), p (ParamIDs::filter),
             p (ParamIDs::resonance), p (ParamIDs::mix), p (ParamIDs::space), p (ParamIDs::reverbMode),
-            p (ParamIDs::loopLevel), p (ParamIDs::loopFade), p (ParamIDs::loopPosition), p (ParamIDs::loopReverse),
-            p (ParamIDs::loopHalf), p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output), p (ParamIDs::drift) };
+            p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output), p (ParamIDs::drift) };
 }
 
 bool MicrocosmProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -31,14 +30,89 @@ void MicrocosmProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     dsp.prepare (sampleRate, juce::jmax (32, samplesPerBlock));
     monoScratch.setSize (1, juce::jmax (32, samplesPerBlock));
+    vizColumnSamples = juce::jmax (1, (int) (sampleRate * kVizSeconds / kVizColumns));
+    vizInCount = vizOutCount = 0;
+    vizInPeak = vizOutPeak = 0.0f;
 }
 
-void MicrocosmProcessor::handleTrigger (const char* id, bool& lastState, LooperCommand cmd, uint32_t& commands)
+// Accumulates per-column peaks for the input (before processing) or the
+// output (after). Both advance in lockstep, so the columns line up.
+void MicrocosmProcessor::updateViz (const float* inL, const float* inR, bool before, int numSamples)
 {
-    const bool on = apvts.getRawParameterValue (id)->load() > 0.5f;
-    if (on && ! lastState)
-        commands |= cmd;
-    lastState = on;
+    int& count = before ? vizInCount : vizOutCount;
+    int& pos = before ? vizInPos : vizOutPos;
+    float& peak = before ? vizInPeak : vizOutPeak;
+    auto& columns = before ? vizIn : vizOut;
+
+    for (int i = 0; i < numSamples; ++i)
+    {
+        peak = juce::jmax (peak, std::abs (inL[i]), inR != nullptr ? std::abs (inR[i]) : 0.0f);
+        if (++count >= vizColumnSamples)
+        {
+            columns[(size_t) pos].store (peak, std::memory_order_relaxed);
+            pos = (pos + 1) % kVizColumns;
+            count = 0;
+            peak = 0.0f;
+        }
+    }
+    if (! before)
+        vizWritePos.store (pos, std::memory_order_release);
+}
+
+void MicrocosmProcessor::publishVoicesAndTaps()
+{
+    mc::Engine::VizVoice voices[kVizMaxVoices];
+    const int nv = dsp.getEngine().snapshotVoices (voices, kVizMaxVoices);
+    for (int i = 0; i < nv; ++i)
+    {
+        vizVoices[(size_t) (i * 3)].store (voices[i].secondsAgo, std::memory_order_relaxed);
+        vizVoices[(size_t) (i * 3 + 1)].store (voices[i].level, std::memory_order_relaxed);
+        vizVoices[(size_t) (i * 3 + 2)].store (voices[i].speed, std::memory_order_relaxed);
+    }
+    vizVoiceCount.store (nv, std::memory_order_release);
+
+    int nt = 0;
+    if (dsp.getEngine().isDelayAlgo())
+    {
+        float delays[kVizMaxTaps], levels[kVizMaxTaps];
+        nt = dsp.getEngine().snapshotTaps (delays, levels, kVizMaxTaps);
+        for (int i = 0; i < nt; ++i)
+        {
+            vizTaps[(size_t) (i * 2)].store (delays[i], std::memory_order_relaxed);
+            vizTaps[(size_t) (i * 2 + 1)].store (levels[i], std::memory_order_relaxed);
+        }
+    }
+    vizTapCount.store (nt, std::memory_order_release);
+}
+
+void MicrocosmProcessor::copyWaveforms (float* in, float* out) const
+{
+    const int start = vizWritePos.load (std::memory_order_acquire);
+    for (int i = 0; i < kVizColumns; ++i)
+    {
+        const auto idx = (size_t) ((start + i) % kVizColumns);
+        in[i] = vizIn[idx].load (std::memory_order_relaxed);
+        out[i] = vizOut[idx].load (std::memory_order_relaxed);
+    }
+}
+
+int MicrocosmProcessor::copyVoices (VizVoice* out) const
+{
+    const int n = juce::jlimit (0, kVizMaxVoices, vizVoiceCount.load (std::memory_order_acquire));
+    for (int i = 0; i < n; ++i)
+        out[i] = { vizVoices[(size_t) (i * 3)].load (std::memory_order_relaxed),
+                   vizVoices[(size_t) (i * 3 + 1)].load (std::memory_order_relaxed),
+                   vizVoices[(size_t) (i * 3 + 2)].load (std::memory_order_relaxed) };
+    return n;
+}
+
+int MicrocosmProcessor::copyTaps (VizTap* out) const
+{
+    const int n = juce::jlimit (0, kVizMaxTaps, vizTapCount.load (std::memory_order_acquire));
+    for (int i = 0; i < n; ++i)
+        out[i] = { vizTaps[(size_t) (i * 2)].load (std::memory_order_relaxed),
+                   vizTaps[(size_t) (i * 2 + 1)].load (std::memory_order_relaxed) };
+    return n;
 }
 
 void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -100,31 +174,19 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     g.mix = raw.mix->load();
     g.space = raw.space->load();
     g.reverbMode = (int) raw.reverbMode->load();
-    g.loopLevel = raw.loopLevel->load();
-    g.loopFadeSeconds = raw.loopFade->load();
-    g.loopPre = raw.loopPosition->load() > 0.5f;
-    g.loopReverse = raw.loopReverse->load() > 0.5f;
-    g.loopHalfSpeed = raw.loopHalf->load() > 0.5f;
     g.drift = raw.drift->load();
     g.outputGain = juce::Decibels::decibelsToGain (raw.output->load());
     dsp.setGlobal (g);
-
-    // ---- looper commands (UI buttons + automatable triggers) ----
-    uint32_t cmds = pendingCommands.exchange (0);
-    handleTrigger (ParamIDs::loopRec, lastRec, CmdRecord, cmds);
-    handleTrigger (ParamIDs::loopPlay, lastPlay, CmdPlayStop, cmds);
-    handleTrigger (ParamIDs::loopUndo, lastUndo, CmdUndo, cmds);
-    handleTrigger (ParamIDs::loopClear, lastClear, CmdClear, cmds);
-    if (cmds & CmdClear) dsp.loopClear();
-    if (cmds & CmdRecord) dsp.loopRecord();
-    if (cmds & CmdPlayStop) dsp.loopPlayStop();
-    if (cmds & CmdUndo) dsp.loopUndo();
 
     // ---- audio ----
     for (int ch = numIn; ch < numOut; ++ch)
         buffer.copyFrom (ch, 0, buffer, 0, 0, numSamples); // mono in -> both sides
 
+    // While HOLD is on the engine works from frozen audio, so the view freezes too.
+    vizFrozen.store (ep.hold);
     float* L = buffer.getWritePointer (0);
+    if (! ep.hold)
+        updateViz (L, numOut >= 2 ? buffer.getReadPointer (1) : nullptr, true, numSamples);
     if (numOut >= 2)
     {
         dsp.process (L, buffer.getWritePointer (1), numSamples);
@@ -141,11 +203,9 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     }
 
     // ---- publish UI state ----
-    const auto& lp = dsp.getLooper();
-    looperState.store ((int) lp.getState());
-    looperPosition.store (lp.getPosition());
-    looperLength.store (lp.getLengthSeconds());
-    looperCanRedo.store (lp.canRedo());
+    if (! ep.hold)
+        updateViz (L, numOut >= 2 ? buffer.getReadPointer (1) : nullptr, false, numSamples);
+    publishVoicesAndTaps();
     if (dsp.getEngine().consumeOnsetFlag())
         onsetFlash.store (true);
 }

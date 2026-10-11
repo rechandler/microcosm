@@ -150,6 +150,35 @@ public:
         }
     }
 
+    // ---- visualizer snapshots (audio thread) ----
+    struct VizVoice
+    {
+        float secondsAgo; // how far back in the recent playing the head is reading
+        float level;      // current loudness of the head (envelope x gain)
+        float speed;      // playback rate (negative = reverse)
+    };
+
+    int snapshotVoices (VizVoice* out, int maxVoices) const
+    {
+        int n = 0;
+        const double now = (double) history.now();
+        for (const auto& v : voices)
+        {
+            if (n >= maxVoices)
+                break;
+            if (! v.isActive() || v.isWaiting())
+                continue;
+            out[n++] = { (float) ((now - v.readPosition()) / sr), v.currentLevel(), (float) v.currentSpeed() };
+        }
+        return n;
+    }
+
+    bool isDelayAlgo() const { return prm.algo == Pattern || prm.algo == Warp; }
+    int snapshotTaps (float* delaySeconds, float* levels, int maxTaps) const
+    {
+        return multiTap.snapshotTaps (delaySeconds, levels, maxTaps);
+    }
+
     bool consumeOnsetFlag() { const bool f = onsetFlag; onsetFlag = false; return f; }
     int activeVoiceCount() const
     {

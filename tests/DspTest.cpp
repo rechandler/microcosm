@@ -1,5 +1,5 @@
 // Headless test for the Microcosm DSP chain. Runs every algorithm/variation
-// (44 presets) plus hold, reverse and the looper over synthetic plucked
+// (44 presets) plus hold and reverse over synthetic plucked
 // input, and checks for silence, NaNs and runaway levels.
 #include "../Source/dsp/MicrocosmDsp.h"
 #include "../Source/Presets.h"
@@ -508,36 +508,32 @@ int main()
         }
     }
 
-    // Looper: record 2 s, play back over silence.
+    // Visualizer snapshots: grain heads must report sensible positions
+    // (inside the recent past) and the delays must report their taps.
     {
         MicrocosmDsp dsp;
         dsp.prepare (kSr, kBlock);
-        MicrocosmDsp::Global g;
-        g.mix = 0.0f;
-        g.space = 0.0f;
-        g.loopLevel = 1.0f;
-        dsp.setGlobal (g);
-        dsp.loopRecord();
-        run (dsp, std::vector<float> (inL.begin(), inL.begin() + (int) kSr * 2),
-             std::vector<float> (inR.begin(), inR.begin() + (int) kSr * 2));
-        dsp.loopPlayStop(); // close loop -> playing
-        const auto playing = run (dsp, std::vector<float> ((size_t) kSr * 4, 0.0f), std::vector<float> ((size_t) kSr * 4, 0.0f));
-        dsp.loopRecord(); // overdub
-        run (dsp, std::vector<float> (inL.begin(), inL.begin() + (int) kSr * 2),
-             std::vector<float> (inR.begin(), inR.begin() + (int) kSr * 2));
-        dsp.loopRecord(); // back to play
-        const auto dubbed = run (dsp, std::vector<float> ((size_t) kSr * 2, 0.0f), std::vector<float> ((size_t) kSr * 2, 0.0f));
-        dsp.loopUndo();
-        const auto undone = run (dsp, std::vector<float> ((size_t) kSr * 2, 0.0f), std::vector<float> ((size_t) kSr * 2, 0.0f));
-        dsp.loopPlayStop(); // fade + stop
-        run (dsp, std::vector<float> ((size_t) kSr * 2, 0.0f), std::vector<float> ((size_t) kSr * 2, 0.0f));
-        const auto stopped = run (dsp, std::vector<float> ((size_t) kSr, 0.0f), std::vector<float> ((size_t) kSr, 0.0f));
+        Engine::Params p;
+        p.algo = Engine::Haze;
+        p.activity = 0.8f;
+        dsp.setEngineParams (p);
+        run (dsp, std::vector<float> (inL.begin(), inL.begin() + (int) kSr * 3),
+             std::vector<float> (inR.begin(), inR.begin() + (int) kSr * 3));
+        Engine::VizVoice vv[32];
+        const int nv = dsp.getEngine().snapshotVoices (vv, 32);
+        bool sane = nv > 0;
+        for (int k = 0; k < nv; ++k)
+            sane = sane && vv[k].secondsAgo >= 0.0f && vv[k].secondsAgo < 30.0f && vv[k].level >= 0.0f;
 
-        const bool ok = playing.rms > 0.01f && dubbed.rms > undone.rms * 1.2f && stopped.rms < 1e-6f
-                        && std::abs (dsp.getLooper().getLengthSeconds() - 2.0f) < 0.01f;
-        failures += ok ? 0 : 1;
-        std::printf ("looper play=%.4f dub=%.4f undo=%.4f stopped=%.6f len=%.3f%s\n", playing.rms, dubbed.rms,
-                     undone.rms, stopped.rms, dsp.getLooper().getLengthSeconds(), ok ? "" : "  <-- FAIL");
+        p.algo = Engine::Pattern;
+        p.activity = 1.0f;
+        dsp.setEngineParams (p);
+        run (dsp, std::vector<float> (inL.begin(), inL.begin() + (int) kSr), std::vector<float> (inR.begin(), inR.begin() + (int) kSr));
+        float delays[8], levels[8];
+        const int nt = dsp.getEngine().snapshotTaps (delays, levels, 8);
+        sane = sane && nt == 8 && delays[0] > 0.0f && delays[7] > delays[0];
+        failures += sane ? 0 : 1;
+        std::printf ("visualizer: %d grain heads, %d taps%s\n", nv, nt, sane ? "" : "  <-- FAIL");
     }
 
     std::printf ("\n%s (%d failures)\n", failures == 0 ? "ALL PASSED" : "FAILED", failures);

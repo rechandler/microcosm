@@ -1,6 +1,6 @@
 # Macrocosm
 
-A free, open-source granular / micro-loop / glitch / multidelay effect plugin with a phrase looper, closely modelled on
+A free, open-source granular / micro-loop / glitch / multidelay effect plugin, closely modelled on
 the **Hologram Electronics Microcosm** pedal. It builds as **VST3 on Windows** and **VST3 + AU (Universal: Apple Silicon + Intel) on macOS**,
 plus a standalone app. Both load in Ableton Live.
 
@@ -67,7 +67,7 @@ Strum, Arp and Tunnel react to note onsets in your playing. A detector picks up 
 
 Pick these from the **Preset** menu at the top of the plugin, or from Live's program list. They're cinematic starting points for guitar:
 Shimmer Cathedral, Frozen Swell, Reverse Bloom, Granular Choir, Tape Memory, Octave Clouds, Rising Tide, Ghost Echoes,
-Crystal Arp, Distant Signal and Infinite Pad. Choosing one sets the effect and sound controls; the looper is left alone.
+Crystal Arp, Distant Signal and Infinite Pad. Choosing one sets the effect and sound controls.
 
 ### Sound quality notes
 
@@ -76,21 +76,19 @@ Crystal Arp, Distant Signal and Infinite Pad. Choosing one sets the effect and s
 - Pitch-shifted echoes (Warp C/D) and the Shimmer reverb use a grain pitch shifter that lines up each new grain with
   the waveform it crossfades into. That way sustained notes shift cleanly without the dropouts and warble of a basic shifter.
 
-### Looper (60 s, stereo)
+### Engine View
 
-| Button | Function |
-|---|---|
-| **Rec / Dub** | 1st press: record. 2nd press: close the loop and start overdubbing. While overdubbing: back to play. |
-| **Play / Stop** | Closes a recording and plays. Stops with a fade (**Loop Fade** sets its length). Restarts. |
-| **Undo / Redo** | Removes or restores the last overdub. |
-| **Clear** | Erases the loop. |
-| **Loop Rev / ½ Speed** | Reverse and half-speed (octave down) playback. |
-| **Loop Level** | Loop playback volume. |
-| **Loop Position** | *Post FX* records the processed output. *Pre FX* records your dry input and runs the loop through the effects. |
+The panel at the bottom right shows what the engine is doing in real time:
 
-All looper buttons are also exposed as automatable trigger parameters, so you can MIDI-map them in Live. Click
-**Configure** on the device, then the button, then use MIDI Map mode. Parameter changes are fully automatable, and state is
-saved with your Live set. Loop audio is not saved.
+- **Scrolling waveform:** the last 8 seconds of your playing (right edge = now), with the effect's output outlined on top.
+- **Dots:** one for each loop or grain currently playing, placed at the moment of your playing it is reading from.
+  - Colour shows pitch: warm for octave up, teal for normal, blue for octave down. Height shows pitch too.
+  - Size and brightness show how loud it is.
+  - A ring instead of a filled dot means it is playing in reverse.
+- **Echo markers:** for Pattern and Warp, one marker per echo tap at its delay time, sized by level.
+- **Hold:** with Hold on, the view freezes along with the audio.
+
+All parameters are automatable and can be MIDI-mapped in Live, and state is saved with your Live set.
 
 ## Building from source
 
@@ -116,7 +114,7 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 ```
 
 Run the headless DSP test with `ctest --test-dir build -C Release`. It renders all 44 presets, extreme settings,
-Hold and the looper, and checks for silence, NaNs and runaway levels.
+Hold, the visualizer data and note detection, and checks for silence, NaNs, aliasing and runaway levels.
 
 CI (`.github/workflows/build.yml`) builds every platform and runs the DSP test and
 [pluginval](https://github.com/Tracktion/pluginval) at strictness 8. On macOS it also runs `auval`. Pushing a tag such as
@@ -134,7 +132,6 @@ Source/
     Reverb.h        8-line FDN reverb, 6 modes incl. Shimmer
     PitchShifter.h  WSOLA-aligned grain pitch shifter (Warp, Shimmer)
     Drift.h         tape wow/flutter on the effect signal
-    Looper.h        phrase looper with undo/redo
     MicrocosmDsp.h  full signal chain
   Parameters.h    parameter IDs and layout
   Presets.h       factory presets

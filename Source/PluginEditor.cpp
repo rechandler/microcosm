@@ -88,10 +88,8 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     setupKnob (filter, ParamIDs::filter, "FILTER", false);
     setupKnob (mix, ParamIDs::mix, "MIX", false);
     setupKnob (space, ParamIDs::space, "SPACE", false);
-    setupKnob (loopLevel, ParamIDs::loopLevel, "LOOP LEVEL", false);
+    setupKnob (drift, ParamIDs::drift, "DRIFT", false);
     setupKnob (resonance, ParamIDs::resonance, "RESONANCE", true);
-    setupKnob (drift, ParamIDs::drift, "DRIFT", true);
-    setupKnob (loopFade, ParamIDs::loopFade, "LOOP FADE", true);
     setupKnob (output, ParamIDs::output, "OUTPUT", true);
     filter.slider.getProperties().set ("bipolar", true);
 
@@ -109,7 +107,6 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
         addAndMakeVisible (label);
     };
     setupCombo (reverbMode, reverbLabel, ParamIDs::reverbMode, "REVERB", reverbAtt);
-    setupCombo (loopPosition, loopPosLabel, ParamIDs::loopPosition, "LOOP POSITION", loopPosAtt);
 
     setupToggle (syncBtn, syncAtt, ParamIDs::sync, "SYNC");
 
@@ -133,8 +130,6 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     addAndMakeVisible (presetLabel);
     setupToggle (holdBtn, holdAtt, ParamIDs::hold, "HOLD");
     setupToggle (reverseBtn, reverseAtt, ParamIDs::fxReverse, "REVERSE");
-    setupToggle (loopRevBtn, loopRevAtt, ParamIDs::loopReverse, "LOOP REV");
-    setupToggle (loopHalfBtn, loopHalfAtt, ParamIDs::loopHalf, "1/2 SPEED");
     holdBtn.getProperties().set ("warm", true);
 
     for (int i = 0; i < mc::Engine::NumAlgos; ++i)
@@ -152,13 +147,7 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
         addAndMakeVisible (b);
     }
 
-    recBtn.onClick = [this] { proc.sendLooperCommand (MicrocosmProcessor::CmdRecord); };
-    playBtn.onClick = [this] { proc.sendLooperCommand (MicrocosmProcessor::CmdPlayStop); };
-    undoBtn.onClick = [this] { proc.sendLooperCommand (MicrocosmProcessor::CmdUndo); };
-    clearBtn.onClick = [this] { proc.sendLooperCommand (MicrocosmProcessor::CmdClear); };
-    recBtn.getProperties().set ("warm", true);
-    for (auto* b : { &recBtn, &playBtn, &undoBtn, &clearBtn })
-        addAndMakeVisible (b);
+    addAndMakeVisible (engineView);
 
     setSize (940, 580);
     startTimerHz (30);
@@ -217,17 +206,13 @@ void MicrocosmEditor::timerCallback()
     for (int i = 0; i < variationButtons.size(); ++i)
         variationButtons[i]->setToggleState (i == var, dontSendNotification);
 
-    const int st = proc.looperState.load();
-    recBtn.setToggleState (st == mc::Looper::Recording || st == mc::Looper::Overdubbing, dontSendNotification);
-    playBtn.setToggleState (st == mc::Looper::Playing || st == mc::Looper::Overdubbing, dontSendNotification);
-    undoBtn.setButtonText (proc.looperCanRedo.load() ? "REDO" : "UNDO");
-
     if (proc.onsetFlash.exchange (false))
         onsetGlow = 1.0f;
     else
         onsetGlow *= 0.8f;
 
     repaint (displayArea);
+    engineView.repaint();
 }
 
 void MicrocosmEditor::paint (Graphics& g)
@@ -249,7 +234,6 @@ void MicrocosmEditor::paint (Graphics& g)
     };
     drawPanel (leftArea);
     drawPanel (effectsArea);
-    drawPanel (looperArea);
 
     // family labels
     g.setFont (FontOptions (11.0f, Font::bold));
@@ -263,7 +247,6 @@ void MicrocosmEditor::paint (Graphics& g)
     {
         const auto* b = variationButtons[0];
         g.drawText ("VARIATION", effectsArea.getX() + 12, b->getY(), 90, b->getHeight(), Justification::centredLeft);
-        g.drawText ("LOOPER", looperArea.getX() + 12, looperArea.getY() + 6, 200, 16, Justification::centredLeft);
     }
 
     // display
@@ -294,25 +277,11 @@ void MicrocosmEditor::paint (Graphics& g)
                                    : String (roundToInt (TimeMapping::freeMs (t))) + " ms (free)";
     g.drawText ("TIME  " + timeText, inner.removeFromTop (18), Justification::centredLeft);
 
-    // looper status + progress
-    static const char* states[] = { "EMPTY", "RECORDING", "PLAYING", "OVERDUBBING", "STOPPED" };
-    const int st = jlimit (0, 4, proc.looperState.load());
-    inner.removeFromTop (4);
-    auto loopRow = inner.removeFromTop (16);
-    g.setColour (st == mc::Looper::Recording || st == mc::Looper::Overdubbing ? MicrocosmLookAndFeel::accent2()
-                                                                               : MicrocosmLookAndFeel::text());
-    g.drawText (String ("LOOP  ") + states[st] + (proc.looperLength.load() > 0.0f
-                                                      ? "  " + String (proc.looperLength.load(), 1) + " s"
-                                                      : String()),
-                loopRow, Justification::centredLeft);
-    auto bar = inner.removeFromTop (6).toFloat();
-    g.setColour (MicrocosmLookAndFeel::dim().withAlpha (0.25f));
-    g.fillRoundedRectangle (bar, 3.0f);
-    if (st == mc::Looper::Playing || st == mc::Looper::Overdubbing)
-    {
-        g.setColour (MicrocosmLookAndFeel::accent());
-        g.fillRoundedRectangle (bar.withWidth (bar.getWidth() * proc.looperPosition.load()), 3.0f);
-    }
+    // reverb readout
+    const int mode = (int) proc.apvts.getRawParameterValue (ParamIDs::reverbMode)->load();
+    const int spacePct = roundToInt (proc.apvts.getRawParameterValue (ParamIDs::space)->load() * 100.0f);
+    g.drawText ("SPACE  " + String (spacePct) + "%  " + mc::Reverb::modeName (mode), inner.removeFromTop (18),
+                Justification::centredLeft);
 
     // onset LED
     const auto led = Rectangle<float> (d.getRight() - 26.0f, d.getY() + 14.0f, 12.0f, 12.0f);
@@ -354,22 +323,16 @@ void MicrocosmEditor::resized()
         layoutKnob (*k, row1.removeFromLeft (kw).reduced (4, 2));
     l.removeFromTop (8);
     auto row2 = l.removeFromTop (138);
-    for (auto* k : { &filter, &mix, &space, &loopLevel })
+    for (auto* k : { &filter, &mix, &space, &drift })
         layoutKnob (*k, row2.removeFromLeft (kw).reduced (4, 2));
     l.removeFromTop (12);
 
     auto row3 = l.removeFromTop (104);
-    for (auto* k : { &resonance, &drift, &loopFade, &output })
+    for (auto* k : { &resonance, &output })
         layoutKnob (*k, row3.removeFromLeft (kw).reduced (12, 2));
-
-    l.removeFromTop (8);
-    auto row4 = l.removeFromTop (48);
-    auto c1 = row4.removeFromLeft (row4.getWidth() / 2).reduced (6, 0);
-    reverbLabel.setBounds (c1.removeFromTop (18));
-    reverbMode.setBounds (c1.removeFromTop (26));
-    auto c2 = row4.reduced (6, 0);
-    loopPosLabel.setBounds (c2.removeFromTop (18));
-    loopPosition.setBounds (c2.removeFromTop (26));
+    auto reverbBox = row3.reduced (10, 0).withSizeKeepingCentre (row3.getWidth() - 20, 48);
+    reverbLabel.setBounds (reverbBox.removeFromTop (18));
+    reverbMode.setBounds (reverbBox.removeFromTop (26));
 
     // ---- right: display ----
     displayArea = right.removeFromTop (122);
@@ -400,16 +363,135 @@ void MicrocosmEditor::resized()
     reverseBtn.setBounds (vline.reduced (3));
 
     right.removeFromTop (12);
-    looperArea = right;
-    auto lp = looperArea.reduced (10);
-    lp.removeFromTop (20);
-    auto lrow1 = lp.removeFromTop (40);
-    const int lw = lrow1.getWidth() / 3;
-    recBtn.setBounds (lrow1.removeFromLeft (lw).reduced (3));
-    playBtn.setBounds (lrow1.removeFromLeft (lw).reduced (3));
-    undoBtn.setBounds (lrow1.reduced (3));
-    auto lrow2 = lp.removeFromTop (40);
-    clearBtn.setBounds (lrow2.removeFromLeft (lw).reduced (3));
-    loopRevBtn.setBounds (lrow2.removeFromLeft (lw).reduced (3));
-    loopHalfBtn.setBounds (lrow2.reduced (3));
+    engineView.setBounds (right);
+}
+
+//==============================================================================
+void EngineView::paint (Graphics& g)
+{
+    using LnF = MicrocosmLookAndFeel;
+    constexpr int cols = MicrocosmProcessor::kVizColumns;
+    constexpr float span = MicrocosmProcessor::kVizSeconds;
+
+    auto r = getLocalBounds().toFloat();
+    g.setColour (Colour (0xff0d1013));
+    g.fillRoundedRectangle (r, 10.0f);
+    g.setColour (LnF::accent().withAlpha (0.2f));
+    g.drawRoundedRectangle (r.reduced (0.5f), 10.0f, 1.0f);
+
+    auto area = r.reduced (12.0f, 8.0f);
+    auto header = area.removeFromTop (16.0f);
+    auto footer = area.removeFromBottom (14.0f);
+    const auto plot = area.reduced (0.0f, 4.0f);
+    const float cy = plot.getCentreY();
+    const float halfH = plot.getHeight() * 0.5f;
+
+    // header: title + pitch legend
+    g.setFont (FontOptions (11.0f, Font::bold));
+    g.setColour (LnF::dim());
+    g.drawText ("ENGINE VIEW", header, Justification::centredLeft);
+    const Colour upCol = LnF::accent2(), normCol = LnF::accent(), downCol = Colour (0xff7aa7ff);
+    {
+        auto legend = header.removeFromRight (250.0f);
+        auto item = [&] (const String& text, Colour c, float w)
+        {
+            auto box = legend.removeFromLeft (w);
+            g.setColour (c);
+            g.fillEllipse (box.getX(), box.getCentreY() - 3.5f, 7.0f, 7.0f);
+            g.setColour (LnF::dim());
+            g.drawText (text, box.withTrimmedLeft (11.0f), Justification::centredLeft);
+        };
+        g.setFont (FontOptions (10.5f));
+        item ("octave up", upCol, 84.0f);
+        item ("normal", normCol, 66.0f);
+        item ("octave down", downCol, 100.0f);
+    }
+
+    auto xFor = [&] (float secondsAgo) { return plot.getRight() - jlimit (0.0f, 1.0f, secondsAgo / span) * plot.getWidth(); };
+    auto heightFor = [&] (float peak)
+    {
+        const float db = 20.0f * std::log10 (jmax (peak, 1.0e-5f));
+        return jlimit (0.0f, 1.0f, (db + 48.0f) / 48.0f) * halfH * 0.9f;
+    };
+
+    // time grid (1 s) + footer labels
+    g.setColour (LnF::dim().withAlpha (0.12f));
+    for (int s = 1; s < (int) span; ++s)
+        g.drawVerticalLine (roundToInt (xFor ((float) s)), plot.getY(), plot.getBottom());
+    g.drawHorizontalLine (roundToInt (cy), plot.getX(), plot.getRight());
+    g.setFont (FontOptions (10.0f));
+    g.setColour (LnF::dim());
+    g.drawText ("-" + String ((int) span) + " s", footer, Justification::centredLeft);
+    g.drawText ("-" + String ((int) span / 2) + " s", footer, Justification::centred);
+    g.drawText ("now", footer, Justification::centredRight);
+
+    // input waveform (dim bars) and effect output (accent outline), oldest -> newest
+    proc.copyWaveforms (inCols, outCols);
+    const float colW = plot.getWidth() / (float) cols;
+    bool anySignal = false;
+    g.setColour (LnF::text().withAlpha (0.22f));
+    for (int i = 0; i < cols; ++i)
+    {
+        const float h = heightFor (inCols[i]);
+        anySignal = anySignal || inCols[i] > 1.0e-4f;
+        if (h > 0.5f)
+            g.fillRect (plot.getX() + (float) i * colW, cy - h, jmax (1.0f, colW - 0.4f), 2.0f * h);
+    }
+    Path outline;
+    for (int i = 0; i < cols; ++i)
+    {
+        const float x = plot.getX() + ((float) i + 0.5f) * colW;
+        const float y = cy - heightFor (outCols[i]);
+        i == 0 ? outline.startNewSubPath (x, y) : outline.lineTo (x, y);
+    }
+    for (int i = cols - 1; i >= 0; --i)
+        outline.lineTo (plot.getX() + ((float) i + 0.5f) * colW, cy + heightFor (outCols[i]));
+    outline.closeSubPath();
+    g.setColour (normCol.withAlpha (0.12f));
+    g.fillPath (outline);
+    g.setColour (normCol.withAlpha (0.55f));
+    g.strokePath (outline, PathStrokeType (1.0f));
+
+    // delay taps
+    const int nt = proc.copyTaps (taps);
+    for (int i = 0; i < nt; ++i)
+    {
+        const float x = xFor (taps[i].secondsAgo);
+        const float h = jlimit (0.15f, 1.0f, taps[i].level * 1.6f) * halfH * 0.85f;
+        g.setColour (normCol.withAlpha (0.75f));
+        g.fillRect (x - 1.0f, cy - h, 2.0f, 2.0f * h);
+        g.fillEllipse (x - 3.0f, cy - h - 3.0f, 6.0f, 6.0f);
+    }
+
+    // grain / loop heads: x = where in the past they read, y = pitch
+    const int nv = proc.copyVoices (voices);
+    for (int i = 0; i < nv; ++i)
+    {
+        const auto& v = voices[i];
+        const float octaves = std::log2 (jmax (1.0e-3f, std::abs (v.speed)));
+        const Colour c = octaves > 0.25f ? upCol : (octaves < -0.25f ? downCol : normCol);
+        const float loud = jlimit (0.0f, 1.0f, v.level * 2.5f);
+        const float x = xFor (v.secondsAgo);
+        const float y = cy - jlimit (-2.0f, 2.0f, octaves) * halfH * 0.42f;
+        const float rad = 2.5f + 5.0f * loud;
+        g.setColour (c.withAlpha (0.08f + 0.2f * loud));
+        g.drawVerticalLine (roundToInt (x), plot.getY(), plot.getBottom());
+        g.setColour (c.withAlpha (0.3f + 0.7f * loud));
+        if (v.speed < 0.0f) // reversed: ring
+            g.drawEllipse (x - rad, y - rad, 2.0f * rad, 2.0f * rad, 1.6f);
+        else
+            g.fillEllipse (x - rad, y - rad, 2.0f * rad, 2.0f * rad);
+    }
+
+    g.setFont (FontOptions (11.0f, Font::bold));
+    if (proc.isVizFrozen())
+    {
+        g.setColour (upCol);
+        g.drawText ("HOLD  -  frozen", plot.reduced (6.0f, 2.0f), Justification::topRight);
+    }
+    else if (! anySignal)
+    {
+        g.setColour (LnF::dim().withAlpha (0.7f));
+        g.drawText ("play something...", plot, Justification::centred);
+    }
 }

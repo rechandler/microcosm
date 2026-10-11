@@ -18,20 +18,10 @@ inline constexpr const char* resonance    = "resonance";
 inline constexpr const char* mix          = "mix";
 inline constexpr const char* space        = "space";
 inline constexpr const char* reverbMode   = "reverbMode";
-inline constexpr const char* loopLevel    = "loopLevel";
-inline constexpr const char* loopFade     = "loopFade";
-inline constexpr const char* loopPosition = "loopPosition";
-inline constexpr const char* loopReverse  = "loopReverse";
-inline constexpr const char* loopHalf     = "loopHalf";
 inline constexpr const char* hold         = "hold";
 inline constexpr const char* fxReverse    = "fxReverse";
 inline constexpr const char* output       = "output";
 inline constexpr const char* drift        = "drift";
-// Momentary looper triggers (rising edge), so they can be MIDI-mapped in a DAW.
-inline constexpr const char* loopRec      = "loopRec";
-inline constexpr const char* loopPlay     = "loopPlay";
-inline constexpr const char* loopUndo     = "loopUndo";
-inline constexpr const char* loopClear    = "loopClear";
 } // namespace ParamIDs
 
 namespace TimeMapping
@@ -111,24 +101,11 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         modes.add (mc::Reverb::modeName (i));
     layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::reverbMode, 1 }, "Reverb Mode", modes, 2));
 
-    knob (ParamIDs::loopLevel, "Loop Level", 0.8f);
-    layout.add (std::make_unique<AudioParameterFloat> (
-        ParameterID { ParamIDs::loopFade, 1 }, "Loop Fade", NormalisableRange<float> (0.01f, 10.0f, 0.0f, 0.4f), 1.0f,
-        AudioParameterFloatAttributes().withStringFromValueFunction ([] (float v, int) { return String (v, 2) + " s"; })));
-    layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::loopPosition, 1 }, "Loop Position",
-                                                        StringArray { "Post FX", "Pre FX" }, 0));
-    layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::loopReverse, 1 }, "Loop Reverse", false));
-    layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::loopHalf, 1 }, "Loop Half Speed", false));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::hold, 1 }, "Hold", false));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::fxReverse, 1 }, "FX Reverse", false));
     layout.add (std::make_unique<AudioParameterFloat> (ParameterID { ParamIDs::output, 1 }, "Output",
                                                        NormalisableRange<float> (-24.0f, 6.0f), 0.0f,
                                                        AudioParameterFloatAttributes().withStringFromValueFunction ([] (float v, int) { return String (v, 1) + " dB"; })));
-
-    layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::loopRec, 1 }, "Loop Rec/Dub (trigger)", false));
-    layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::loopPlay, 1 }, "Loop Play/Stop (trigger)", false));
-    layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::loopUndo, 1 }, "Loop Undo/Redo (trigger)", false));
-    layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::loopClear, 1 }, "Loop Clear (trigger)", false));
 
     return layout;
 }

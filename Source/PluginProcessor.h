@@ -3,19 +3,12 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Parameters.h"
 #include "dsp/MicrocosmDsp.h"
+#include <array>
 #include <atomic>
 
 class MicrocosmProcessor : public juce::AudioProcessor
 {
 public:
-    enum LooperCommand : uint32_t
-    {
-        CmdRecord = 1u << 0,
-        CmdPlayStop = 1u << 1,
-        CmdUndo = 1u << 2,
-        CmdClear = 1u << 3,
-    };
-
     MicrocosmProcessor();
     ~MicrocosmProcessor() override = default;
 
@@ -43,26 +36,44 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
-    // Called from the UI thread.
-    void sendLooperCommand (LooperCommand c) { pendingCommands.fetch_or (c); }
-
     juce::AudioProcessorValueTreeState apvts;
 
     // State published by the audio thread for the UI.
-    std::atomic<int> looperState { 0 };
-    std::atomic<float> looperPosition { 0.0f };
-    std::atomic<float> looperLength { 0.0f };
-    std::atomic<bool> looperCanRedo { false };
     std::atomic<bool> onsetFlash { false };
     std::atomic<float> currentBpm { 120.0f };
 
+    // ---- Engine view (visualizer) data, written lock-free by the audio thread ----
+    static constexpr float kVizSeconds = 8.0f;  // time span shown
+    static constexpr int kVizColumns = 400;     // waveform resolution
+    static constexpr int kVizMaxVoices = 32;
+    static constexpr int kVizMaxTaps = 8;
+
+    struct VizVoice { float secondsAgo, level, speed; };
+    struct VizTap { float secondsAgo, level; };
+
+    // Peak level per column of the input and the output, oldest first.
+    void copyWaveforms (float* in, float* out) const;
+    int copyVoices (VizVoice* out) const;
+    int copyTaps (VizTap* out) const;
+    bool isVizFrozen() const { return vizFrozen.load(); }
+
 private:
-    void handleTrigger (const char* id, bool& lastState, LooperCommand cmd, uint32_t& commands);
+    void updateViz (const float* inL, const float* inR, bool before, int numSamples);
+    void publishVoicesAndTaps();
 
     mc::MicrocosmDsp dsp;
-    std::atomic<uint32_t> pendingCommands { 0 };
-    bool lastRec = false, lastPlay = false, lastUndo = false, lastClear = false;
     juce::AudioBuffer<float> monoScratch;
+
+    std::array<std::atomic<float>, kVizColumns> vizIn {}, vizOut {};
+    std::atomic<int> vizWritePos { 0 };
+    int vizColumnSamples = 960;
+    int vizInCount = 0, vizOutCount = 0, vizInPos = 0, vizOutPos = 0;
+    float vizInPeak = 0.0f, vizOutPeak = 0.0f;
+    std::array<std::atomic<float>, kVizMaxVoices * 3> vizVoices {};
+    std::atomic<int> vizVoiceCount { 0 };
+    std::array<std::atomic<float>, kVizMaxTaps * 2> vizTaps {};
+    std::atomic<int> vizTapCount { 0 };
+    std::atomic<bool> vizFrozen { false };
     int currentProgram = 0;
 
     struct Raw
@@ -72,8 +83,6 @@ private:
         std::atomic<float>* time; std::atomic<float>* sync;
         std::atomic<float>* filter; std::atomic<float>* resonance; std::atomic<float>* mix;
         std::atomic<float>* space; std::atomic<float>* reverbMode;
-        std::atomic<float>* loopLevel; std::atomic<float>* loopFade; std::atomic<float>* loopPosition;
-        std::atomic<float>* loopReverse; std::atomic<float>* loopHalf;
         std::atomic<float>* hold; std::atomic<float>* fxReverse; std::atomic<float>* output;
         std::atomic<float>* drift;
     } raw {};

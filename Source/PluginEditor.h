@@ -20,6 +20,24 @@ public:
     static juce::Colour dim()     { return juce::Colour (0xff8a8f9c); }
 };
 
+// ENGINE VIEW: the last few seconds of the input as a scrolling waveform with
+// the effect output overlaid, plus a playhead for every active loop/grain at
+// the moment of the playing it is reading from (colour = pitch, size =
+// loudness, ring = reversed) and markers for the delay taps.
+class EngineView : public juce::Component
+{
+public:
+    explicit EngineView (MicrocosmProcessor& p) : proc (p) {}
+    void paint (juce::Graphics&) override;
+
+private:
+    MicrocosmProcessor& proc;
+    float inCols[MicrocosmProcessor::kVizColumns] {};
+    float outCols[MicrocosmProcessor::kVizColumns] {};
+    MicrocosmProcessor::VizVoice voices[MicrocosmProcessor::kVizMaxVoices] {};
+    MicrocosmProcessor::VizTap taps[MicrocosmProcessor::kVizMaxTaps] {};
+};
+
 class MicrocosmEditor : public juce::AudioProcessorEditor, private juce::Timer
 {
 public:
@@ -50,22 +68,22 @@ private:
     MicrocosmProcessor& proc;
     MicrocosmLookAndFeel lnf;
 
-    Knob activity, repeats, shape, time, filter, mix, space, loopLevel;
-    Knob resonance, drift, loopFade, output;
+    Knob activity, repeats, shape, time, filter, mix, space, drift;
+    Knob resonance, output;
     juce::ComboBox presetBox;
     juce::Label presetLabel;
 
-    juce::ComboBox reverbMode, loopPosition;
-    juce::Label reverbLabel, loopPosLabel;
-    std::unique_ptr<ComboAttachment> reverbAtt, loopPosAtt;
+    juce::ComboBox reverbMode;
+    juce::Label reverbLabel;
+    std::unique_ptr<ComboAttachment> reverbAtt;
 
-    juce::TextButton syncBtn, holdBtn, reverseBtn, loopRevBtn, loopHalfBtn;
-    std::unique_ptr<ButtonAttachment> syncAtt, holdAtt, reverseAtt, loopRevAtt, loopHalfAtt;
+    juce::TextButton syncBtn, holdBtn, reverseBtn;
+    std::unique_ptr<ButtonAttachment> syncAtt, holdAtt, reverseAtt;
 
     juce::OwnedArray<juce::TextButton> algoButtons, variationButtons;
-    juce::TextButton recBtn { "REC / DUB" }, playBtn { "PLAY / STOP" }, undoBtn { "UNDO" }, clearBtn { "CLEAR" };
 
-    juce::Rectangle<int> displayArea, effectsArea, looperArea, leftArea;
+    juce::Rectangle<int> displayArea, effectsArea, leftArea;
+    EngineView engineView { proc };
     float onsetGlow = 0.0f;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MicrocosmEditor)

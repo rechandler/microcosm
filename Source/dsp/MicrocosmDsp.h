@@ -1,7 +1,6 @@
 #pragma once
 
 #include "Engine.h"
-#include "Looper.h"
 #include "Drift.h"
 #include "Reverb.h"
 
@@ -10,12 +9,8 @@ namespace mc
 // Complete signal chain, independent of any plugin framework:
 //
 //   in ─┬──────────────────────────────── dry ──┐
-//       │                                        ├─ MIX ─ SPACE ─┬─ out
-//       └─ ENGINE (11 algos) ─ DRIFT ─ FILTER ─ wet ┘               │
-//                                                    LOOPER ─────┘ (post)
-//
-// With the looper in "pre" position the loop is recorded from the input and
-// its playback is fed into the effects instead.
+//       │                                        ├─ MIX ─ SPACE ─ OUTPUT ─ out
+//       └─ ENGINE (11 algos) ─ DRIFT ─ FILTER ─ wet ┘
 class MicrocosmDsp
 {
 public:
@@ -26,12 +21,7 @@ public:
         float mix = 0.5f;        // 0 dry .. 1 wet
         float space = 0.25f;     // reverb amount
         int reverbMode = Reverb::LargeHall;
-        float loopLevel = 0.8f;
-        bool loopPre = false;
-        float loopFadeSeconds = 1.0f;
         float drift = 0.0f;      // tape wow/flutter on the effect signal
-        bool loopReverse = false;
-        bool loopHalfSpeed = false;
         float outputGain = 1.0f; // linear
     };
 
@@ -44,15 +34,13 @@ public:
         duckDelay.assign ((size_t) nextPowerOfTwo (drift.latencySamples() + 1), 0.0f);
         duckPos = 0;
         reverb.prepare (sampleRate);
-        looper.prepare (sampleRate, 60.0);
         for (auto* v : { &wetL, &wetR, &duck, &dryL, &dryR })
             v->assign ((size_t) blockSize, 0.0f);
 
-        for (auto* s : { &mixS, &spaceS, &loopS, &filterS, &resS, &outS })
+        for (auto* s : { &mixS, &spaceS, &filterS, &resS, &outS })
             s->setTime (0.02f, sr);
         mixS.reset (g.mix);
         spaceS.reset (g.space);
-        loopS.reset (g.loopLevel);
         filterS.reset (g.filter);
         resS.reset (g.resonance);
         outS.reset (g.outputGain);
@@ -76,19 +64,10 @@ public:
     {
         g = gl;
         reverb.setMode (g.reverbMode);
-        looper.setReverse (g.loopReverse);
-        looper.setHalfSpeed (g.loopHalfSpeed);
-        looper.setFadeTime (g.loopFadeSeconds);
     }
 
-    // Looper transport (audio thread only).
-    void loopRecord() { looper.pressRecord(); }
-    void loopPlayStop() { looper.pressPlayStop(); }
-    void loopUndo() { looper.undoRedo(); }
-    void loopClear() { looper.clear(); }
-
-    const Looper& getLooper() const { return looper; }
     Engine& getEngine() { return engine; }
+    const Engine& getEngine() const { return engine; }
 
     // In-place stereo processing.
     void process (float* L, float* R, int numSamples)
@@ -108,25 +87,14 @@ private:
         float* dl = dryL.data();
         float* dr = dryR.data();
 
-        // 1. Looper in PRE position: record the input, feed playback forward.
-        for (int i = 0; i < n; ++i)
-        {
-            dl[i] = L[i];
-            dr[i] = R[i];
-            if (g.loopPre)
-            {
-                float pl, pr;
-                looper.process (L[i], R[i], pl, pr);
-                const float lvl = loopS.process (g.loopLevel);
-                dl[i] += pl * lvl;
-                dr[i] += pr * lvl;
-            }
-        }
+        // Keep the dry input: processing is in place.
+        std::copy (L, L + n, dl);
+        std::copy (R, R + n, dr);
 
-        // 2. Effect engine
+        // 1. Effect engine
         engine.process (dl, dr, wetL.data(), wetR.data(), duck.data(), n);
 
-        // 3. Filter, mix, space, (post) looper
+        // 2. Drift, filter, mix, space
         for (int i = 0; i < n; ++i)
         {
             const float f = filterS.process (g.filter);
@@ -170,15 +138,6 @@ private:
                 ol = ol * dryKeep + rl * 1.2f;
                 orr = orr * dryKeep + rr * 1.2f;
                 reverbTail = s > 0.0005f ? (int) (20.0f * sr) : reverbTail - 1;
-            }
-
-            if (! g.loopPre)
-            {
-                float pl, pr;
-                looper.process (ol, orr, pl, pr);
-                const float lvl = loopS.process (g.loopLevel);
-                ol += pl * lvl;
-                orr += pr * lvl;
             }
 
             const float og = outS.process (g.outputGain);
@@ -228,12 +187,11 @@ private:
     std::vector<float> duckDelay;
     int duckPos = 0;
     Reverb reverb;
-    Looper looper;
     Svf svf[2];
     FilterMode filterMode = Bypass;
     int filterCounter = 0;
     int reverbTail = 0;
-    OnePole mixS, spaceS, loopS, filterS, resS, outS;
+    OnePole mixS, spaceS, filterS, resS, outS;
     std::vector<float> wetL, wetR, duck, dryL, dryR;
 };
 } // namespace mc
