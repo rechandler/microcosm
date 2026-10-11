@@ -86,6 +86,8 @@ The panel at the bottom right shows what the engine is doing in real time:
   - Colour shows pitch: warm for octave up, teal for normal, blue for octave down. Height shows pitch too.
   - Size and brightness show how loud it is.
   - A ring instead of a filled dot means it is playing in reverse.
+- **"◀ N older":** heads reading from further back than 8 seconds, e.g. Seq replaying an older captured phrase, are
+  counted at the left edge. Seq grabs a fresh phrase every 1 to ~16 cycles depending on Repeats (capped at about 12 s).
 - **Echo markers:** for Pattern and Warp, one marker per echo tap at its delay time, sized by level.
 - **Hold:** with Hold on, the view freezes along with the audio.
 

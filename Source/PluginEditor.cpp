@@ -470,14 +470,24 @@ void EngineView::paint (Graphics& g)
         g.fillEllipse (x - 3.0f, cy - h - 3.0f, 6.0f, 6.0f);
     }
 
-    // grain / loop heads: x = where in the past they read, y = pitch
+    // grain / loop heads: x = where in the past they read, y = pitch.
+    // Heads reading from further back than the view (e.g. Seq replaying an
+    // older capture) are counted at the left edge instead of piling up there.
     const int nv = proc.copyVoices (voices);
+    int older = 0;
+    float olderLoud = 0.0f;
     for (int i = 0; i < nv; ++i)
     {
         const auto& v = voices[i];
         const float octaves = std::log2 (jmax (1.0e-3f, std::abs (v.speed)));
         const Colour c = octaves > 0.25f ? upCol : (octaves < -0.25f ? downCol : normCol);
         const float loud = jlimit (0.0f, 1.0f, v.level * 2.5f);
+        if (v.secondsAgo > span)
+        {
+            ++older;
+            olderLoud = jmax (olderLoud, loud);
+            continue;
+        }
         const float x = xFor (v.secondsAgo);
         const float y = cy - jlimit (-2.0f, 2.0f, octaves) * halfH * 0.42f;
         const float rad = 2.5f + 5.0f * loud;
@@ -488,6 +498,18 @@ void EngineView::paint (Graphics& g)
             g.drawEllipse (x - rad, y - rad, 2.0f * rad, 2.0f * rad, 1.6f);
         else
             g.fillEllipse (x - rad, y - rad, 2.0f * rad, 2.0f * rad);
+    }
+
+    if (older > 0)
+    {
+        const float ax = plot.getX() + 2.0f;
+        Path arrow;
+        arrow.addTriangle (ax, cy, ax + 9.0f, cy - 6.0f, ax + 9.0f, cy + 6.0f);
+        g.setColour (normCol.withAlpha (0.4f + 0.6f * olderLoud));
+        g.fillPath (arrow);
+        g.setFont (FontOptions (10.5f, Font::bold));
+        g.drawText (String (older) + " older", Rectangle<float> (ax + 12.0f, cy - 8.0f, 70.0f, 16.0f),
+                    Justification::centredLeft);
     }
 
     g.setFont (FontOptions (11.0f, Font::bold));
