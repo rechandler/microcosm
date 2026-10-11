@@ -107,7 +107,7 @@ int main()
             dsp.prepare (kSr, kBlock);
             MicrocosmDsp::Global g;
             g.space = 1.0f;
-            g.reverbMode = a % 4;
+            g.reverbMode = a % Reverb::NumModes; // includes Shimmer and Cathedral
             g.filter = x;
             g.resonance = 1.0f;
             dsp.setGlobal (g);
@@ -387,6 +387,97 @@ int main()
                 std::printf ("quiet input %s %c: %.1f dB  <-- FAIL\n", Engine::algoName (a), 'A' + v, relDb);
             }
         }
+    }
+
+    // Regression: Warp D's pitch-shifter grains must stay half a grain apart
+    // after the grain length changes (they once locked in phase, giving a
+    // 20-25 dB tremolo at 44.1/48 kHz).
+    for (double rate : { 44100.0, 48000.0 })
+    {
+        MultiTap mt;
+        mt.prepare (rate, 20.0);
+        mt.setParams (true, 3, 0.0f, 0.0f, 0.5f, rate * 0.5, false, false);
+        std::vector<float> out;
+        for (int i = 0; i < (int) rate * 3; ++i)
+        {
+            const float x = 0.3f * std::sin (kTwoPi * 220.0f * (float) i / (float) rate);
+            float l, r;
+            mt.process (x, x, l, r);
+            if (i > (int) rate)
+                out.push_back (l);
+        }
+        const int w = (int) (rate * 0.01);
+        float mn = 1.0e9f, mx = 0.0f;
+        for (size_t s0 = 0; s0 + (size_t) w < out.size(); s0 += (size_t) w)
+        {
+            double e = 0;
+            for (int k = 0; k < w; ++k)
+                e += (double) out[s0 + (size_t) k] * out[s0 + (size_t) k];
+            const float v = (float) std::sqrt (e / w);
+            mn = std::min (mn, v);
+            mx = std::max (mx, v);
+        }
+        const float ripple = 20.0f * std::log10 (mx / std::max (mn, 1.0e-6f));
+        const bool ok = ripple < 1.5f;
+        failures += ok ? 0 : 1;
+        std::printf ("Warp D level ripple at %.0f Hz: %.1f dB%s\n", rate, ripple, ok ? "" : "  <-- FAIL");
+    }
+
+    // Regression: Strum must keep repeating when notes come faster than its
+    // repeat length (each new note restarts the chain).
+    {
+        Engine e;
+        e.prepare (kSr);
+        Engine::Params p;
+        p.algo = Engine::Strum;
+        p.activity = 0.0f;
+        p.unitSamples = 0.5 * kSr;
+        e.setParams (p);
+        std::vector<float> in (kBlock), o1 (kBlock), o2 (kBlock), d (kBlock);
+        double energy = 0;
+        for (int b = 0; b < (int) (kSr * 6 / kBlock); ++b)
+        {
+            for (int k = 0; k < kBlock; ++k)
+            {
+                const int s0 = b * kBlock + k;
+                const float t = (float) (s0 % (int) (0.3 * kSr)) / (float) kSr;
+                in[(size_t) k] = 0.3f * std::min (1.0f, t / 0.005f) * std::exp (-t * 4.0f) * std::sin (kTwoPi * 196.0f * t);
+            }
+            e.process (in.data(), in.data(), o1.data(), o2.data(), d.data(), kBlock);
+            for (float v : o1)
+                energy += (double) v * v;
+        }
+        const float rms = (float) std::sqrt (energy / (kSr * 6));
+        const bool ok = rms > 0.01f;
+        failures += ok ? 0 : 1;
+        std::printf ("Strum with notes 0.3 s apart: rms=%.4f%s\n", rms, ok ? "" : "  <-- FAIL");
+    }
+
+    // Regression: note detection keeps its 30 ms look-back at 192 kHz.
+    {
+        const double hiSr = 192000.0;
+        MicrocosmDsp dsp;
+        dsp.prepare (hiSr, kBlock);
+        Engine::Params p;
+        p.algo = Engine::Strum;
+        p.unitSamples = 0.5 * hiSr;
+        dsp.setEngineParams (p);
+        int detected = 0;
+        std::vector<float> l (kBlock), r (kBlock);
+        for (int s0 = 0; s0 < (int) hiSr * 12; s0 += kBlock)
+        {
+            for (int k = 0; k < kBlock; ++k)
+            {
+                const float t = (float) ((s0 + k) % (int) (1.5 * hiSr)) / (float) hiSr;
+                l[(size_t) k] = r[(size_t) k] = 0.01f * std::min (1.0f, t / 0.03f) * std::exp (-t * 1.2f)
+                                                * std::sin (kTwoPi * 146.8f * t);
+            }
+            dsp.process (l.data(), r.data(), kBlock);
+            detected += dsp.getEngine().consumeOnsetFlag() ? 1 : 0;
+        }
+        const bool ok = detected == 8;
+        failures += ok ? 0 : 1;
+        std::printf ("note detection at 192 kHz: %d of 8%s\n", detected, ok ? "" : "  <-- FAIL");
     }
 
     // Looper: record 2 s, play back over silence.

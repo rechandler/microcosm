@@ -12,8 +12,9 @@ on:
         required: false
         default: ""
 
+# Build jobs only need to read the repo; only the release job may write.
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   windows:
@@ -41,7 +42,7 @@ jobs:
       - name: pluginval
         shell: pwsh
         run: |
-          Invoke-WebRequest https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Windows.zip -OutFile pluginval.zip
+          Invoke-WebRequest https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Windows.zip -OutFile pluginval.zip
           Expand-Archive pluginval.zip -DestinationPath pluginval
           # pluginval.exe is a GUI-subsystem app: PowerShell doesn't wait for it or
           # set $LASTEXITCODE unless it is started with -Wait.
@@ -79,7 +80,7 @@ jobs:
           auval -v aufx Mcsm Mcra
       - name: pluginval
         run: |
-          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_macOS.zip
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
           unzip -q pluginval.zip
           ./pluginval.app/Contents/MacOS/pluginval --strictness-level 8 --validate-in-process --timeout-ms 600000 "build/Macrocosm_artefacts/Release/VST3/Macrocosm.vst3"
       - name: Package
@@ -112,7 +113,7 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: pluginval
         run: |
-          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/latest/download/pluginval_Linux.zip
+          curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
           unzip -q pluginval.zip
           xvfb-run -a ./pluginval --strictness-level 8 --validate-in-process --timeout-ms 600000 build/Macrocosm_artefacts/Release/VST3/Macrocosm.vst3
 
@@ -121,6 +122,8 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.release != '')
     needs: [windows, macos]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       # Checkout first: it cleans the workspace, which would delete the zips.
       - uses: actions/checkout@v4

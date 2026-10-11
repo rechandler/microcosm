@@ -32,11 +32,17 @@ public:
     void setRatio (float r) { ratio = r; }
     void setGrainLength (float samples)
     {
+        samples = std::max (64.0f, samples);
         if (std::abs (samples - grainLen) > 1.0f)
         {
-            grainLen = std::max (64.0f, samples);
+            // Rescale both heads' positions so they stay half a grain apart:
+            // wrapping each separately can leave them in phase (a hard
+            // tremolo instead of a smooth crossfade).
+            const float scale = samples / grainLen;
             for (auto& h : heads)
-                h.age = std::fmod (h.age, grainLen);
+                h.age = std::min (h.age * scale, samples - 1.0f);
+            heads[1].age = std::fmod (heads[0].age + 0.5f * samples, samples);
+            grainLen = samples;
         }
     }
     void setBaseDelay (float samples) { baseDelay = std::max (0.0f, samples); }
@@ -77,10 +83,17 @@ private:
 
     static float read (const float* buf, int mask, int newest, float delay)
     {
-        const float pos = (float) newest - delay;
-        const float fl = std::floor (pos);
-        const int i = (int) fl;
-        const float t = pos - fl;
+        // Split the delay into whole samples and a fraction before combining
+        // with the (large) buffer index, so the fraction keeps full precision.
+        const float whole = std::floor (delay);
+        const float frac = delay - whole;
+        int i = newest - (int) whole;
+        float t = 0.0f;
+        if (frac > 0.0f)
+        {
+            --i;
+            t = 1.0f - frac;
+        }
         return hermite (buf[(i - 1) & mask], buf[i & mask], buf[(i + 1) & mask], buf[(i + 2) & mask], t);
     }
 

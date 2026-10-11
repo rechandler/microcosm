@@ -41,6 +41,8 @@ public:
         blockSize = std::max (16, maxBlockSize);
         engine.prepare (sampleRate);
         drift.prepare (sampleRate);
+        duckDelay.assign ((size_t) nextPowerOfTwo (drift.latencySamples() + 1), 0.0f);
+        duckPos = 0;
         reverb.prepare (sampleRate);
         looper.prepare (sampleRate, 60.0);
         for (auto* v : { &wetL, &wetR, &duck, &dryL, &dryR })
@@ -137,6 +139,13 @@ private:
 
             float wl = wetL[(size_t) i], wr = wetR[(size_t) i];
             drift.process (wl, wr, g.drift);
+
+            // The effect signal now runs Drift's few ms behind, so delay the
+            // INTERRUPT dry-duck by the same amount to keep them aligned.
+            const int duckMask = (int) duckDelay.size() - 1;
+            duckDelay[(size_t) duckPos] = duck[(size_t) i];
+            const float duckNow = duckDelay[(size_t) ((duckPos - drift.latencySamples()) & duckMask)];
+            duckPos = (duckPos + 1) & duckMask;
             if (filterMode != Bypass)
             {
                 const auto type = filterMode == Low ? Svf::LowPass : Svf::HighPass;
@@ -145,7 +154,7 @@ private:
             }
 
             const float m = mixS.process (g.mix);
-            const float dryGain = std::min (1.0f, 2.0f * (1.0f - m)) * (1.0f - duck[(size_t) i]);
+            const float dryGain = std::min (1.0f, 2.0f * (1.0f - m)) * (1.0f - duckNow);
             const float wetGain = std::min (1.0f, 2.0f * m);
             float ol = dl[i] * dryGain + wl * wetGain;
             float orr = dr[i] * dryGain + wr * wetGain;
@@ -214,6 +223,8 @@ private:
     Global g;
     Engine engine;
     Drift drift;
+    std::vector<float> duckDelay;
+    int duckPos = 0;
     Reverb reverb;
     Looper looper;
     Svf svf[2];

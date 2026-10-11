@@ -20,7 +20,7 @@ public:
             b.assign ((size_t) size, 0.0f);
         mask = size - 1;
         pos = 0;
-        baseDelay = 0.012f * sr;
+        baseDelay = std::round (0.008f * sr); // just over the deepest modulation (~6.2 ms)
         wowPhase[0] = 0.0f;
         wowPhase[1] = 1.7f;
         flutterPhase = 0.0f;
@@ -30,6 +30,9 @@ public:
         depth.setTime (0.05f, sr);
         depth.reset (0.0f);
     }
+
+    // Constant delay this adds to the effect signal (whatever the amount).
+    int latencySamples() const { return (int) baseDelay; }
 
     void process (float& l, float& r, float amount)
     {

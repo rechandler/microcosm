@@ -82,7 +82,9 @@ public:
         sr = (float) sampleRate;
         onsetAtt = 1.0f - std::exp (-1.0f / (0.001f * sr));
         onsetRel = 1.0f - std::exp (-1.0f / (0.020f * sr));
-        onsetLagSteps = std::min (kOnsetHistory - 1, (int) std::lround (0.03f * sr / kOnsetDecimation));
+        // Keep the 30 ms look-back inside the history at any sample rate.
+        onsetDecimation = std::max (1, (int) std::lround (sr / 3000.0f));
+        onsetLagSteps = std::min (kOnsetHistory - 1, (int) std::lround (0.03f * sr / (float) onsetDecimation));
         history.prepare (sampleRate, 32.0);
         multiTap.prepare (sampleRate, 20.0);
         reset();
@@ -237,7 +239,7 @@ private:
         const float a = std::abs (x);
         onsetFast += (a > onsetFast ? onsetAtt : onsetRel) * (a - onsetFast);
 
-        if (++onsetDecimCounter >= kOnsetDecimation)
+        if (++onsetDecimCounter >= onsetDecimation)
         {
             onsetDecimCounter = 0;
             onsetHistoryPos = (onsetHistoryPos + 1) % kOnsetHistory;
@@ -497,18 +499,26 @@ private:
 
             case Tunnel:
             {
-                if (onset)
+                // A new note schedules a drone from its sustain. Keep the first
+                // pending note (rather than letting each new note replace it)
+                // so fast playing still produces drones, and pick the loop
+                // length once per drone so it really varies over 60-250 ms.
+                if (onset && pendingTunnelOnset < 0)
+                {
                     pendingTunnelOnset = (int64_t) now;
+                    pendingTunnelLen = rng.uniform (0.06f, 0.25f) * sr;
+                }
                 bool trigger = false;
-                double start = 0.0;
-                const double segLen = rng.uniform (0.06f, 0.25f) * sr;
+                double start = 0.0, segLen = 0.0;
 
                 // Loop the sustained part of a new note, not its pick attack:
                 // a looped attack pulses at the loop rate instead of droning.
                 const double skipAttack = 0.09 * sr;
-                if (pendingTunnelOnset >= 0 && now - (double) pendingTunnelOnset >= skipAttack + segLen + 0.02 * sr)
+                if (pendingTunnelOnset >= 0
+                    && now - (double) pendingTunnelOnset >= skipAttack + pendingTunnelLen + 0.02 * sr)
                 {
                     trigger = true;
+                    segLen = pendingTunnelLen;
                     start = (double) pendingTunnelOnset + skipAttack;
                     pendingTunnelOnset = -1;
                 }
@@ -516,6 +526,7 @@ private:
                 {
                     unitCountdown = (int) std::round (lerp (4.0f, 1.0f, A));
                     trigger = true;
+                    segLen = rng.uniform (0.06f, 0.25f) * sr;
                     start = now - segLen - rng.uniform (0.0f, 0.5f) * sr;
                 }
                 if (! trigger || activeCount() >= 2 + (int) (A * 4.0f))
@@ -600,9 +611,11 @@ private:
                 // instead of leaving gaps between repeats. Wait (without using
                 // up a step) until enough of a fresh note has been recorded,
                 // rather than firing a truncated blip just after the attack.
+                // (The wait is capped at 100 ms so fast playing, where each new
+                // note restarts the chain, still produces repeats.)
                 const double wanted = std::min (step * 1.3 * p.speed, 0.6 * sr);
                 const double recorded = now - src - 2.0;
-                if (! prm.hold && recorded < 0.7 * wanted)
+                if (! prm.hold && recorded < std::min (0.7 * wanted, 0.1 * sr))
                     break;
                 p.segLen = std::min (wanted, recorded);
                 if (p.segLen > 0.01 * sr)
@@ -815,7 +828,8 @@ private:
     int64_t counter = 0;
 
     // onset detection
-    static constexpr int kOnsetDecimation = 16, kOnsetHistory = 256;
+    static constexpr int kOnsetHistory = 256;
+    int onsetDecimation = 16;
     float onsetFast = 0.0f;
     float onsetAtt = 0.1f, onsetRel = 0.01f;
     std::array<float, kOnsetHistory> onsetHistory {};
@@ -829,6 +843,7 @@ private:
     double hazeCountdown = 0.0;
     int unitCountdown = 0;
     int64_t pendingTunnelOnset = -1;
+    double pendingTunnelLen = 0.0;
     std::array<int, 8> seqPattern {};
     double seqCaptureStart = 0.0;
     int seqCyclesLeft = 0;
