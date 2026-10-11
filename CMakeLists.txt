@@ -9,7 +9,7 @@ set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "Minimum macOS version")
 # Windows: link the C runtime statically so the plugin has no VC++ redist dependency.
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
-project(Macrocosm VERSION 1.0.0 LANGUAGES C CXX)
+project(Tessera VERSION 1.0.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,20 +22,20 @@ FetchContent_Declare(JUCE
     GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(JUCE)
 
-option(MACROCOSM_BUILD_TESTS "Build the headless DSP test" ON)
+option(TESSERA_BUILD_TESTS "Build the headless DSP test" ON)
 
-set(MACROCOSM_FORMATS VST3 Standalone)
+set(TESSERA_FORMATS VST3 Standalone)
 if(APPLE)
-    list(APPEND MACROCOSM_FORMATS AU)
+    list(APPEND TESSERA_FORMATS AU)
 endif()
 
-juce_add_plugin(Macrocosm
-    PRODUCT_NAME "Macrocosm"
-    COMPANY_NAME "Macrocosm Audio"
-    BUNDLE_ID "com.macrocosmaudio.macrocosm"
-    PLUGIN_MANUFACTURER_CODE Mcra
-    PLUGIN_CODE Mcsm
-    FORMATS ${MACROCOSM_FORMATS}
+juce_add_plugin(Tessera
+    PRODUCT_NAME "Tessera"
+    COMPANY_NAME "Tessera Audio"
+    BUNDLE_ID "com.tesseraaudio.tessera"
+    PLUGIN_MANUFACTURER_CODE Tsra
+    PLUGIN_CODE Tess
+    FORMATS ${TESSERA_FORMATS}
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
@@ -45,17 +45,17 @@ juce_add_plugin(Macrocosm
     VST3_CATEGORIES Fx Delay Reverb
     AU_MAIN_TYPE kAudioUnitType_Effect)
 
-target_sources(Macrocosm PRIVATE
+target_sources(Tessera PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginEditor.cpp)
 
-target_compile_definitions(Macrocosm PUBLIC
+target_compile_definitions(Tessera PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
     JUCE_DISPLAY_SPLASH_SCREEN=0)
 
-target_link_libraries(Macrocosm
+target_link_libraries(Tessera
     PRIVATE
         juce::juce_audio_utils
         juce::juce_dsp
@@ -66,11 +66,11 @@ target_link_libraries(Macrocosm
 
 if(MSVC)
     # Keep symbols for Release builds so crash reports have readable stacks.
-    target_compile_options(Macrocosm PRIVATE $<$<CONFIG:Release>:/Zi>)
-    target_link_options(Macrocosm PUBLIC $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
+    target_compile_options(Tessera PRIVATE $<$<CONFIG:Release>:/Zi>)
+    target_link_options(Tessera PUBLIC $<$<CONFIG:Release>:/DEBUG /OPT:REF /OPT:ICF>)
 endif()
 
-if(MACROCOSM_BUILD_TESTS)
+if(TESSERA_BUILD_TESTS)
     enable_testing()
     add_executable(DspTest tests/DspTest.cpp)
     add_test(NAME DspTest COMMAND DspTest)

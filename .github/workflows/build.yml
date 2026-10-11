@@ -32,13 +32,13 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item -Recurse "build\Macrocosm_artefacts\Release\VST3\Macrocosm.vst3" dist\
-          Copy-Item "build\Macrocosm_artefacts\Release\Standalone\Macrocosm.exe" dist\
-          Compress-Archive -Path dist\* -DestinationPath Macrocosm-Windows-x64.zip
+          Copy-Item -Recurse "build\Tessera_artefacts\Release\VST3\Tessera.vst3" dist\
+          Copy-Item "build\Tessera_artefacts\Release\Standalone\Tessera.exe" dist\
+          Compress-Archive -Path dist\* -DestinationPath Tessera-Windows-x64.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: Macrocosm-Windows-x64
-          path: Macrocosm-Windows-x64.zip
+          name: Tessera-Windows-x64
+          path: Tessera-Windows-x64.zip
       - name: pluginval
         shell: pwsh
         run: |
@@ -48,7 +48,7 @@ jobs:
           # set $LASTEXITCODE unless it is started with -Wait.
           $p = Start-Process -FilePath .\pluginval\pluginval.exe -NoNewWindow -Wait -PassThru -ArgumentList @(
             "--strictness-level", "8", "--timeout-ms", "600000",
-            "build\Macrocosm_artefacts\Release\VST3\Macrocosm.vst3")
+            "build\Tessera_artefacts\Release\VST3\Tessera.vst3")
           Write-Host "pluginval exit code: $($p.ExitCode)"
           exit $p.ExitCode
 
@@ -65,35 +65,35 @@ jobs:
         run: ctest --test-dir build -C Release --output-on-failure
       - name: Verify universal binary
         run: |
-          lipo -info "build/Macrocosm_artefacts/Release/VST3/Macrocosm.vst3/Contents/MacOS/Macrocosm"
-          lipo -info "build/Macrocosm_artefacts/Release/AU/Macrocosm.component/Contents/MacOS/Macrocosm"
+          lipo -info "build/Tessera_artefacts/Release/VST3/Tessera.vst3/Contents/MacOS/Tessera"
+          lipo -info "build/Tessera_artefacts/Release/AU/Tessera.component/Contents/MacOS/Tessera"
       - name: Ad-hoc sign
         run: |
-          codesign --force --deep -s - "build/Macrocosm_artefacts/Release/VST3/Macrocosm.vst3"
-          codesign --force --deep -s - "build/Macrocosm_artefacts/Release/AU/Macrocosm.component"
-          codesign --force --deep -s - "build/Macrocosm_artefacts/Release/Standalone/Macrocosm.app"
+          codesign --force --deep -s - "build/Tessera_artefacts/Release/VST3/Tessera.vst3"
+          codesign --force --deep -s - "build/Tessera_artefacts/Release/AU/Tessera.component"
+          codesign --force --deep -s - "build/Tessera_artefacts/Release/Standalone/Tessera.app"
       - name: Validate AU (auval)
         run: |
           mkdir -p ~/Library/Audio/Plug-Ins/Components
-          cp -R "build/Macrocosm_artefacts/Release/AU/Macrocosm.component" ~/Library/Audio/Plug-Ins/Components/
+          cp -R "build/Tessera_artefacts/Release/AU/Tessera.component" ~/Library/Audio/Plug-Ins/Components/
           killall -9 AudioComponentRegistrar || true
-          auval -v aufx Mcsm Mcra
+          auval -v aufx Tess Tsra
       - name: pluginval
         run: |
           curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_macOS.zip
           unzip -q pluginval.zip
-          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 8 --validate-in-process --timeout-ms 600000 "build/Macrocosm_artefacts/Release/VST3/Macrocosm.vst3"
+          ./pluginval.app/Contents/MacOS/pluginval --strictness-level 8 --validate-in-process --timeout-ms 600000 "build/Tessera_artefacts/Release/VST3/Tessera.vst3"
       - name: Package
         run: |
           mkdir -p dist
-          cp -R build/Macrocosm_artefacts/Release/VST3/Macrocosm.vst3 dist/
-          cp -R build/Macrocosm_artefacts/Release/AU/Macrocosm.component dist/
-          cp -R build/Macrocosm_artefacts/Release/Standalone/Macrocosm.app dist/
-          cd dist && ditto -c -k --keepParent . ../Macrocosm-macOS-Universal.zip
+          cp -R build/Tessera_artefacts/Release/VST3/Tessera.vst3 dist/
+          cp -R build/Tessera_artefacts/Release/AU/Tessera.component dist/
+          cp -R build/Tessera_artefacts/Release/Standalone/Tessera.app dist/
+          cd dist && ditto -c -k --keepParent . ../Tessera-macOS-Universal.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: Macrocosm-macOS-Universal
-          path: Macrocosm-macOS-Universal.zip
+          name: Tessera-macOS-Universal
+          path: Tessera-macOS-Universal.zip
 
   linux:
     name: Linux (VST3, tests)
@@ -115,7 +115,7 @@ jobs:
         run: |
           curl -sSL -o pluginval.zip https://github.com/Tracktion/pluginval/releases/download/v1.0.4/pluginval_Linux.zip
           unzip -q pluginval.zip
-          xvfb-run -a ./pluginval --strictness-level 8 --validate-in-process --timeout-ms 600000 build/Macrocosm_artefacts/Release/VST3/Macrocosm.vst3
+          xvfb-run -a ./pluginval --strictness-level 8 --validate-in-process --timeout-ms 600000 build/Tessera_artefacts/Release/VST3/Tessera.vst3
 
   release:
     name: Publish release
@@ -138,6 +138,6 @@ jobs:
         with:
           tag_name: ${{ inputs.release || github.ref_name }}
           target_commitish: ${{ github.sha }}
-          name: Macrocosm ${{ inputs.release || github.ref_name }}
+          name: Tessera ${{ inputs.release || github.ref_name }}
           body_path: docs/RELEASE_NOTES.md
           files: artifacts/*.zip

@@ -1,30 +1,36 @@
-# Macrocosm
+# Tessera
 
 A free, open-source granular / micro-loop / glitch / multidelay effect plugin, closely modelled on
 the **Hologram Electronics Microcosm** pedal. It builds as **VST3 on Windows** and **VST3 + AU (Universal: Apple Silicon + Intel) on macOS**,
 plus a standalone app. Both load in Ableton Live.
 
-![Macrocosm UI](docs/screenshot.png)
+![Tessera UI](docs/screenshot.png)
 
 > Not affiliated with or endorsed by Hologram Electronics. "Microcosm" is their trademark. This project is an
 > independent re-creation of the effect's concept, so it ships under a different name. It also deliberately goes further
 > than the pedal in places, with Shimmer and Cathedral reverbs, Drift and factory presets, for cinematic textures.
 
+## Upgrading from Macrocosm
+
+Tessera was released as **Macrocosm** (v1.0.0). It is a new plugin as far as Live is concerned: delete the old
+`Macrocosm.vst3` (and `Macrocosm.component` on a Mac), install Tessera, rescan, and add Tessera to your tracks again.
+Sets saved with Macrocosm won't restore their settings into Tessera.
+
 ## Install in Ableton Live
 
 ### Windows
-1. Download `Macrocosm-Windows-x64.zip` from the latest GitHub Actions run (**Actions → Build → Artifacts**) or from a
+1. Download `Tessera-Windows-x64.zip` from the latest GitHub Actions run (**Actions → Build → Artifacts**) or from a
    tagged **Release**.
-2. Copy `Macrocosm.vst3` into `C:\Program Files\Common Files\VST3\`.
+2. Copy `Tessera.vst3` into `C:\Program Files\Common Files\VST3\`.
 3. In Live: **Options → Preferences → Plug-Ins**, turn on **Use VST3 Plug-In System Folders**, then click **Rescan**.
-4. Find it under **Plug-Ins → Macrocosm Audio → Macrocosm** and drop it on an audio track or a return track.
+4. Find it under **Plug-Ins → Tessera Audio → Tessera** and drop it on an audio track or a return track.
 
 ### macOS
-1. Download `Macrocosm-macOS-Universal.zip`.
-2. Copy `Macrocosm.vst3` to `~/Library/Audio/Plug-Ins/VST3/` and/or `Macrocosm.component` to
+1. Download `Tessera-macOS-Universal.zip`.
+2. Copy `Tessera.vst3` to `~/Library/Audio/Plug-Ins/VST3/` and/or `Tessera.component` to
    `~/Library/Audio/Plug-Ins/Components/`.
 3. The build is ad-hoc signed, not notarized. If macOS blocks it, run:
-   `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Macrocosm.vst3 ~/Library/Audio/Plug-Ins/Components/Macrocosm.component`
+   `xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Tessera.vst3 ~/Library/Audio/Plug-Ins/Components/Tessera.component`
 4. In Live, enable VST3 and/or Audio Units under **Preferences → Plug-Ins** and rescan.
 
 ## The effect
@@ -102,7 +108,7 @@ Requirements: CMake 3.22+ and a C++17 compiler. JUCE 8 is downloaded automatical
 cmake -B build -A x64
 cmake --build build --config Release
 ```
-The plugin is written to `build\Macrocosm_artefacts\Release\VST3\Macrocosm.vst3`.
+The plugin is written to `build\Tessera_artefacts\Release\VST3\Tessera.vst3`.
 
 **macOS** (Xcode):
 ```

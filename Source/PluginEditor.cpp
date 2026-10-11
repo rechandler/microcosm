@@ -223,7 +223,7 @@ void MicrocosmEditor::paint (Graphics& g)
     // header
     g.setColour (MicrocosmLookAndFeel::text());
     g.setFont (FontOptions (26.0f, Font::bold));
-    g.drawText ("MACROCOSM", 24, 12, 300, 34, Justification::centredLeft);
+    g.drawText ("TESSERA", 24, 12, 300, 34, Justification::centredLeft);
 
     // panels
     auto drawPanel = [&g] (Rectangle<int> r)
