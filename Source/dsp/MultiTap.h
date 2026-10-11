@@ -96,9 +96,17 @@ public:
             auto& t = taps[(size_t) i];
             t.targetDelay = std::min ((double) times[i] * sixteenth, maxDelay);
             const float x = numTaps > 1 ? (float) i / (float) (numTaps - 1) : 0.0f;
-            t.gain = i < numTaps ? std::max (0.08f, 1.0f + tilt * (x - 0.5f) * 1.7f) : 0.0f;
-            if (tilt < 0.0f)
-                t.gain *= std::pow (1.0f - 0.6f * x, -tilt * 1.5f);
+            // Only active taps get a level. (Inactive taps have x > 1, where
+            // the decay curve below would take a power of a negative number:
+            // NaN, which zeroed the whole output whenever Shape < 50% and
+            // Activity switched some taps off.)
+            t.gain = 0.0f;
+            if (i < numTaps)
+            {
+                t.gain = std::max (0.08f, 1.0f + tilt * (x - 0.5f) * 1.7f);
+                if (tilt < 0.0f)
+                    t.gain *= std::pow (std::max (0.0f, 1.0f - 0.6f * x), -tilt * 1.5f);
+            }
             norm += t.gain * t.gain;
             const float side = (i % 2 == 0) ? -1.0f : 1.0f;
             t.pan = side * (0.25f + 0.6f * x);

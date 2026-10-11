@@ -545,6 +545,37 @@ int main()
         }
     }
 
+    // Every algorithm/variation must make sound across a grid of Shape and
+    // Activity (Warp/Pattern once went silent for Shape < 50% whenever
+    // Activity switched some taps off).
+    for (int a = 0; a < Engine::NumAlgos; ++a)
+        for (int v = 0; v < 4; ++v)
+            for (float shape : { 0.0f, 0.25f, 0.45f, 0.55f, 1.0f })
+                for (float act : { 0.0f, 0.3f, 0.5f, 0.8f, 1.0f })
+                {
+                    MicrocosmDsp dsp;
+                    dsp.prepare (kSr, kBlock);
+                    MicrocosmDsp::Global g;
+                    g.mix = 1.0f;
+                    g.space = 0.0f;
+                    dsp.setGlobal (g);
+                    Engine::Params p;
+                    p.algo = a;
+                    p.variation = v;
+                    p.shape = shape;
+                    p.activity = act;
+                    p.unitSamples = 0.5 * kSr;
+                    dsp.setEngineParams (p);
+                    const auto st = run (dsp, std::vector<float> (inL.begin(), inL.begin() + (int) kSr * 4),
+                                         std::vector<float> (inR.begin(), inR.begin() + (int) kSr * 4), (int) kSr);
+                    if (! (st.rms > 0.001f))
+                    {
+                        ++failures;
+                        std::printf ("silent: %s %c shape %.2f activity %.2f (rms %.5f)  <-- FAIL\n",
+                                     Engine::algoName (a), 'A' + v, shape, act, st.rms);
+                    }
+                }
+
     // Visualizer snapshots: grain heads must report sensible positions
     // (inside the recent past) and the delays must report their taps.
     {

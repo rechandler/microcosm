@@ -100,9 +100,13 @@ private:
         float* dl = dryL.data();
         float* dr = dryR.data();
 
-        // Keep the dry input: processing is in place.
-        std::copy (L, L + n, dl);
-        std::copy (R, R + n, dr);
+        // Keep the dry input (processing is in place), replacing anything
+        // non-finite from the host so it can't lodge in filter/reverb state.
+        for (int i = 0; i < n; ++i)
+        {
+            dl[i] = std::isfinite (L[i]) ? L[i] : 0.0f;
+            dr[i] = std::isfinite (R[i]) ? R[i] : 0.0f;
+        }
 
         // Reverb before the effect: both the dry path and the engine get the
         // reverberated guitar.
@@ -124,7 +128,10 @@ private:
                 updateFilter (f, q);
             }
 
-            float wl = wetL[(size_t) i], wr = wetR[(size_t) i];
+            // Guard: a non-finite effect sample would poison Drift, the filter
+            // and the reverb permanently; drop it instead.
+            float wl = std::isfinite (wetL[(size_t) i]) ? wetL[(size_t) i] : 0.0f;
+            float wr = std::isfinite (wetR[(size_t) i]) ? wetR[(size_t) i] : 0.0f;
             drift.process (wl, wr, g.drift);
 
             // The effect signal now runs Drift's few ms behind, so delay the
