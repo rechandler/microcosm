@@ -36,6 +36,7 @@ public:
         int reverbPosition = ReverbAfter;
         float drift = 0.0f;      // tape wow/flutter on the effect signal
         float outputGain = 1.0f; // linear
+        bool transportRunning = true; // false: the effect fades out and clears (host stopped)
     };
 
     void prepare (double sampleRate, int maxBlockSize)
@@ -57,6 +58,9 @@ public:
         filterS.reset (g.filter);
         resS.reset (g.resonance);
         outS.reset (g.outputGain);
+        transportGate = g.transportRunning ? 1.0f : 0.0f;
+        gateDown = 1.0f / (0.25f * sr);
+        gateUp = 1.0f / (0.01f * sr);
         svf[0].reset();
         svf[1].reset();
         filterCounter = 0;
@@ -78,6 +82,9 @@ public:
         g = gl;
         reverb.setMode (g.reverbMode);
     }
+
+    // True once a stopped transport has faded the effect out and cleared it.
+    bool isEffectStopped() const { return engine.isHalted(); }
 
     Engine& getEngine() { return engine; }
     const Engine& getEngine() const { return engine; }
@@ -114,7 +121,10 @@ private:
             for (int i = 0; i < n; ++i)
                 applySpace (dl[i], dr[i]);
 
-        // 1. Effect engine
+        // 1. Effect engine. A stopped transport fades the effect out, then
+        // clears it; on restart it starts fresh.
+        if (g.transportRunning)
+            engine.resume();
         engine.process (dl, dr, wetL.data(), wetR.data(), duck.data(), n);
 
         // 2. Drift, filter, mix, space
@@ -130,14 +140,17 @@ private:
 
             // Guard: a non-finite effect sample would poison Drift, the filter
             // and the reverb permanently; drop it instead.
-            float wl = std::isfinite (wetL[(size_t) i]) ? wetL[(size_t) i] : 0.0f;
-            float wr = std::isfinite (wetR[(size_t) i]) ? wetR[(size_t) i] : 0.0f;
+            transportGate = g.transportRunning ? std::min (1.0f, transportGate + gateUp)
+                                               : std::max (0.0f, transportGate - gateDown);
+            const float gate = transportGate * transportGate;
+            float wl = std::isfinite (wetL[(size_t) i]) ? wetL[(size_t) i] * gate : 0.0f;
+            float wr = std::isfinite (wetR[(size_t) i]) ? wetR[(size_t) i] * gate : 0.0f;
             drift.process (wl, wr, g.drift);
 
             // The effect signal now runs Drift's few ms behind, so delay the
             // INTERRUPT dry-duck by the same amount to keep them aligned.
             const int duckMask = (int) duckDelay.size() - 1;
-            duckDelay[(size_t) duckPos] = duck[(size_t) i];
+            duckDelay[(size_t) duckPos] = duck[(size_t) i] * gate;
             const float duckNow = duckDelay[(size_t) ((duckPos - drift.latencySamples()) & duckMask)];
             duckPos = (duckPos + 1) & duckMask;
             if (filterMode != Bypass)
@@ -165,6 +178,9 @@ private:
             L[i] = sanitize (ol * og);
             R[i] = sanitize (orr * og);
         }
+
+        if (! g.transportRunning && transportGate <= 0.0f)
+            engine.halt();
     }
 
     // SPACE: blends the reverb into the signal in place (one call per sample,
@@ -228,6 +244,7 @@ private:
     FilterMode filterMode = Bypass;
     int filterCounter = 0;
     int reverbTail = 0;
+    float transportGate = 1.0f, gateDown = 1.0f / 12000.0f, gateUp = 1.0f / 480.0f;
     OnePole mixS, spaceS, filterS, resS, outS;
     std::vector<float> wetL, wetR, duck, dryL, dryR;
 };

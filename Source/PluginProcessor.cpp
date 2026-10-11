@@ -13,7 +13,7 @@ MicrocosmProcessor::MicrocosmProcessor()
             p (ParamIDs::shape), p (ParamIDs::time), p (ParamIDs::sync), p (ParamIDs::filter),
             p (ParamIDs::resonance), p (ParamIDs::mix), p (ParamIDs::space), p (ParamIDs::reverbMode),
             p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output), p (ParamIDs::drift),
-            p (ParamIDs::reverbPos) };
+            p (ParamIDs::reverbPos), p (ParamIDs::transport) };
 }
 
 bool MicrocosmProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -73,7 +73,7 @@ void MicrocosmProcessor::publishVoicesAndTaps()
     vizVoiceCount.store (nv, std::memory_order_release);
 
     int nt = 0;
-    if (dsp.getEngine().isDelayAlgo())
+    if (dsp.getEngine().isDelayAlgo() && ! dsp.isEffectStopped())
     {
         float delays[kVizMaxTaps], levels[kVizMaxTaps];
         nt = dsp.getEngine().snapshotTaps (delays, levels, kVizMaxTaps);
@@ -129,10 +129,12 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     double bpm = 120.0;
     juce::Optional<double> ppq;
     bool playing = false;
+    bool hasTransport = false; // false in the standalone app or hosts without a play head
     if (auto* ph = getPlayHead())
     {
         if (auto pos = ph->getPosition())
         {
+            hasTransport = true;
             if (auto b = pos->getBpm())
                 bpm = juce::jlimit (20.0, 400.0, *b);
             playing = pos->getIsPlaying();
@@ -179,6 +181,8 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     g.reverbPosition = (int) raw.reverbPos->load();
     g.drift = raw.drift->load();
     g.outputGain = juce::Decibels::decibelsToGain (raw.output->load());
+    // TRANSPORT: the effect runs only while the host plays.
+    g.transportRunning = raw.transport->load() < 0.5f || ! hasTransport || playing;
     dsp.setGlobal (g);
 
     // ---- audio ----
@@ -209,6 +213,7 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     if (! ep.hold)
         updateViz (L, numOut >= 2 ? buffer.getReadPointer (1) : nullptr, false, numSamples);
     publishVoicesAndTaps();
+    transportStopped.store (dsp.isEffectStopped());
     if (dsp.getEngine().consumeOnsetFlag())
         onsetFlash.store (true);
 }

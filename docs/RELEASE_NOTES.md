@@ -24,7 +24,8 @@ Tessera is a granular, micro-loop, glitch and multidelay effect, inspired by the
 - **Reverb Position:** after the effect, before it (the effect chops up the reverb wash) or on the effect only (dry guitar stays dry).
 - **Drift:** tape-style wow and flutter on the effect sound.
 - **Hold** (freeze) and **Reverse**.
-- **Engine View:** a live display of your playing, the effect output, every active loop and grain (by position, pitch and level) and the delay taps.
+- **Transport:** the effect starts and stops with Live's transport. Stopping fades it out and clears it; play starts it fresh, on the grid. Turn it off to keep the effect running while Live is stopped.
+- **Engine View:** a live display of your playing, the effect output, every active loop and grain (by position, pitch and level, with rings for reversed ones) and the delay taps.
 - **14 factory presets**, including Shimmer Cathedral, Frozen Swell, Reverse Bloom, Infinite Pad, Cloud Choir and Clean Halo.
 - **Clean octave-up:**
   - Band-limited playback means pitched-up loops and grains don't alias.

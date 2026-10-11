@@ -40,8 +40,40 @@ public:
         {
             std::fill (line[c].begin(), line[c].end(), 0.0f);
             std::fill (lineAA[c].begin(), lineAA[c].end(), 0.0f);
-            aa[c].reset();
         }
+        flushPos = size;
+        resetState();
+    }
+
+    // Transport stop: forget the echoes without a CPU spike. beginFlush()
+    // silences the taps at once; flushStep() (one call per sample while
+    // stopped) clears the delay lines a slice at a time.
+    void beginFlush()
+    {
+        flushPos = 0;
+        resetState();
+    }
+
+    void flushStep()
+    {
+        if (flushPos >= size)
+            return;
+        const int end = std::min (size, flushPos + kFlushPerStep);
+        for (int c = 0; c < 2; ++c)
+        {
+            std::fill (line[c].begin() + flushPos, line[c].begin() + end, 0.0f);
+            std::fill (lineAA[c].begin() + flushPos, lineAA[c].begin() + end, 0.0f);
+        }
+        flushPos = end;
+    }
+
+    bool isFlushed() const { return flushPos >= size; }
+
+private:
+    void resetState()
+    {
+        for (int c = 0; c < 2; ++c)
+            aa[c].reset();
         for (auto& t : taps)
         {
             t = {};
@@ -51,6 +83,8 @@ public:
         fbLpL = fbLpR = fbHpL = fbHpR = 0.0f;
         envFollow = 0.0f;
     }
+
+public:
 
     // warp: false = PATTERN, true = WARP
     void setParams (bool isWarp, int var, float activity, float repeats, float shape,
@@ -283,6 +317,8 @@ private:
     std::vector<float> line[2], lineAA[2];
     AntiAliasFilter aa[2];
     int size = 1, mask = 0, writePos = 0;
+    static constexpr int kFlushPerStep = 256; // samples cleared per call (~0.1 s for 20 s at 48 kHz)
+    int flushPos = 0;
     float sr = 48000.0f;
     std::array<Tap, kMaxTaps> taps {};
     int numTaps = 1, lastTap = 0, variation = 0;

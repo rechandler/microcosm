@@ -45,6 +45,7 @@ public:
                 aa[l][c].reset();
             }
         writeCount = 0;
+        flushPos = size;
     }
 
     void clear()
@@ -52,7 +53,23 @@ public:
         for (auto& level : data)
             for (auto& ch : level)
                 std::fill (ch.begin(), ch.end(), 0.0f);
+        flushPos = size;
     }
+
+    // Transport stop: wipe the recording a slice at a time (no CPU spike).
+    // Call flushStep() once per sample until isFlushed().
+    void beginFlush() { flushPos = 0; }
+    void flushStep()
+    {
+        if (flushPos >= size)
+            return;
+        const int end = std::min (size, flushPos + kFlushPerStep);
+        for (auto& level : data)
+            for (auto& ch : level)
+                std::fill (ch.begin() + flushPos, ch.begin() + end, 0.0f);
+        flushPos = end;
+    }
+    bool isFlushed() const { return flushPos >= size; }
 
     void setFrozen (bool shouldFreeze) { frozen = shouldFreeze; }
     bool isFrozen() const { return frozen; }
@@ -90,6 +107,8 @@ private:
     std::vector<float> data[kNumLevels][2];
     AntiAliasFilter aa[kNumLevels][2];
     int size = 1, mask = 0;
+    static constexpr int kFlushPerStep = 256; // ~0.2 s to wipe 32 s at 48 kHz
+    int flushPos = 0;
     int64_t writeCount = 0;
     bool frozen = false;
 };

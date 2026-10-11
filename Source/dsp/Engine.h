@@ -117,6 +117,7 @@ public:
         multiTap.reset();
         for (auto& v : voices)
             v.stop();
+        halted = resumePending = awaitingPlay = false;
         clock = prevClock = 0.0;
         counter = 0;
         onsetCount = 0;
@@ -149,16 +150,36 @@ public:
         prm.unitSamples = std::min (std::max (p.unitSamples, 0.02 * sr), 2.5 * sr);
         history.setFrozen (p.hold);
 
-        const bool isDelay = (prm.algo == Pattern || prm.algo == Warp);
-        if (isDelay)
-            multiTap.setParams (prm.algo == Warp, prm.variation, prm.activity, prm.repeats, prm.shape,
-                                prm.unitSamples, prm.hold, prm.reverse);
-        else
-            multiTap.setParams (lastDelayWasWarp, prm.variation, 0.0f, std::min (prm.repeats, 0.5f), 0.5f,
-                                prm.unitSamples, false, false); // let trails die away
-        if (isDelay)
-            lastDelayWasWarp = prm.algo == Warp;
+        applyMultiTapParams();
     }
+
+    // Host transport stopped: drop every loop, grain and echo and start no
+    // new ones. The recording and the echo lines are wiped a slice at a time
+    // (no CPU spike), so playback restarts from silence: resume() takes
+    // effect once the wipe has finished (a fraction of a second).
+    void halt()
+    {
+        resumePending = false;
+        if (halted)
+            return;
+        halted = true;
+        for (auto& v : voices)
+            v.stop();
+        onsetCount = 0;
+        chainRemaining = arpRemaining = 0;
+        seqCaptured = false;
+        pendingTunnelOnset = -1;
+        hazeCountdown = 0.0;
+        busyUntil = 0;
+        duckSmooth = 0.0f;
+        history.beginFlush();
+        multiTap.beginFlush();
+    }
+
+    void resume() { resumePending = halted; }
+
+    bool isHalted() const { return halted; }
+    bool isFlushing() const { return ! history.isFlushed() || ! multiTap.isFlushed(); }
 
     // Host-sync: absolute clock position in TIME units at the start of a block.
     void syncClock (double unitPosition)
@@ -217,7 +238,20 @@ public:
 
         for (int i = 0; i < n; ++i)
         {
-            const float xl = inL[i], xr = inR[i];
+            if (halted)
+            {
+                history.flushStep();
+                multiTap.flushStep();
+                if (resumePending && ! isFlushing())
+                {
+                    halted = resumePending = false;
+                    awaitingPlay = true;
+                    applyMultiTapParams();
+                }
+            }
+
+            // While stopped the effect isn't listening: it records silence.
+            const float xl = halted ? 0.0f : inL[i], xr = halted ? 0.0f : inR[i];
             history.write (xl, xr);
 
             prevClock = clock;
@@ -233,7 +267,11 @@ public:
                 ++onsetCount;
             }
 
-            if (! isDelay)
+            // After a restart the recording is empty: wait for the first
+            // note rather than loop the silence before it.
+            if (onset)
+                awaitingPlay = false;
+            if (! isDelay && ! halted && ! awaitingPlay)
                 schedule (onset);
 
             float l = 0.0f, r = 0.0f, d = 0.0f;
@@ -254,8 +292,9 @@ public:
                 delayGain = delayGainSmooth;
             }
 
-            float tl, tr;
-            multiTap.process (xl * delayGain, xr * delayGain, tl, tr);
+            float tl = 0.0f, tr = 0.0f;
+            if (! halted)
+                multiTap.process (xl * delayGain, xr * delayGain, tl, tr);
             l += tl;
             r += tr;
 
@@ -327,6 +366,19 @@ private:
         const float attack = lerp (0.005f, 0.8f, (S - 0.5f) * 2.0f);
         const float w = std::sin (0.5f * kPi * std::min (1.0f, t / attack));
         return w * w;
+    }
+
+    void applyMultiTapParams()
+    {
+        const bool isDelay = (prm.algo == Pattern || prm.algo == Warp);
+        if (isDelay)
+            multiTap.setParams (prm.algo == Warp, prm.variation, prm.activity, prm.repeats, prm.shape,
+                                prm.unitSamples, prm.hold, prm.reverse);
+        else
+            multiTap.setParams (lastDelayWasWarp, prm.variation, 0.0f, std::min (prm.repeats, 0.5f), 0.5f,
+                                prm.unitSamples, false, false); // let trails die away
+        if (isDelay)
+            lastDelayWasWarp = prm.algo == Warp;
     }
 
     int activeCount() const { return activeVoiceCount(); }
@@ -932,6 +984,7 @@ private:
     double seqCaptureStart = 0.0;
     int seqCyclesLeft = 0;
     bool seqCaptured = false;
+    bool halted = false, resumePending = false, awaitingPlay = false;
     int chainRemaining = 0, chainIndex = 0;
     float chainGain = 1.0f, chainDecay = 0.9f;
     int arpRemaining = 0, arpIndex = 0;

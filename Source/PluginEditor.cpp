@@ -110,6 +110,8 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     setupCombo (reverbPosition, reverbPosLabel, ParamIDs::reverbPos, "REVERB POSITION", reverbPosAtt);
 
     setupToggle (syncBtn, syncAtt, ParamIDs::sync, "SYNC");
+    setupToggle (transportBtn, transportAtt, ParamIDs::transport, "TRANSPORT");
+    transportBtn.setTooltip ("Run the effect only while the host is playing");
 
     for (int i = 0; i < Presets::count; ++i)
         presetBox.addItem (Presets::list[i].name, i + 1);
@@ -331,6 +333,8 @@ void MicrocosmEditor::resized()
 {
     auto r = getLocalBounds().reduced (16);
     auto header = r.removeFromTop (44).withTrimmedLeft (200).reduced (0, 6);
+    transportBtn.setBounds (header.removeFromRight (110));
+    header.removeFromRight (8);
     syncBtn.setBounds (header.removeFromRight (90));
     header.removeFromRight (16);
     presetBox.setBounds (header.removeFromRight (260));
@@ -417,25 +421,29 @@ void EngineView::paint (Graphics& g)
     const float cy = plot.getCentreY();
     const float halfH = plot.getHeight() * 0.5f;
 
-    // header: title + pitch legend
+    // header: title + legend (colour = pitch, ring = reversed)
     g.setFont (FontOptions (11.0f, Font::bold));
     g.setColour (LnF::dim());
     g.drawText ("ENGINE VIEW", header, Justification::centredLeft);
     const Colour upCol = LnF::accent2(), normCol = LnF::accent(), downCol = Colour (0xff7aa7ff);
     {
-        auto legend = header.removeFromRight (250.0f);
-        auto item = [&] (const String& text, Colour c, float w)
+        auto legend = header.removeFromRight (300.0f);
+        auto item = [&] (const String& text, Colour c, float w, bool ring = false)
         {
             auto box = legend.removeFromLeft (w);
             g.setColour (c);
-            g.fillEllipse (box.getX(), box.getCentreY() - 3.5f, 7.0f, 7.0f);
+            if (ring)
+                g.drawEllipse (box.getX() + 0.5f, box.getCentreY() - 3.0f, 6.0f, 6.0f, 1.4f);
+            else
+                g.fillEllipse (box.getX(), box.getCentreY() - 3.5f, 7.0f, 7.0f);
             g.setColour (LnF::dim());
             g.drawText (text, box.withTrimmedLeft (11.0f), Justification::centredLeft);
         };
         g.setFont (FontOptions (10.5f));
-        item ("octave up", upCol, 84.0f);
-        item ("normal", normCol, 66.0f);
-        item ("octave down", downCol, 100.0f);
+        item ("octave up", upCol, 80.0f);
+        item ("normal", normCol, 60.0f);
+        item ("octave down", downCol, 90.0f);
+        item ("reversed", LnF::dim(), 70.0f, true);
     }
 
     auto xFor = [&] (float secondsAgo) { return plot.getRight() - jlimit (0.0f, 1.0f, secondsAgo / span) * plot.getWidth(); };
@@ -541,6 +549,11 @@ void EngineView::paint (Graphics& g)
     {
         g.setColour (upCol);
         g.drawText ("HOLD  -  frozen", plot.reduced (6.0f, 2.0f), Justification::topRight);
+    }
+    if (proc.isTransportStopped())
+    {
+        g.setColour (LnF::dim());
+        g.drawText ("STOPPED  -  press play", plot.reduced (6.0f, 2.0f), Justification::topLeft);
     }
     else if (! anySignal)
     {

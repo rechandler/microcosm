@@ -78,8 +78,8 @@ private:
     juce::Label reverbLabel, reverbPosLabel;
     std::unique_ptr<ComboAttachment> reverbAtt, reverbPosAtt;
 
-    juce::TextButton syncBtn, holdBtn, reverseBtn;
-    std::unique_ptr<ButtonAttachment> syncAtt, holdAtt, reverseAtt;
+    juce::TextButton syncBtn, transportBtn, holdBtn, reverseBtn;
+    std::unique_ptr<ButtonAttachment> syncAtt, transportAtt, holdAtt, reverseAtt;
 
     juce::OwnedArray<juce::TextButton> algoButtons, variationButtons;
 

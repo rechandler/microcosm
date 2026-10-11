@@ -23,6 +23,7 @@ inline constexpr const char* fxReverse    = "fxReverse";
 inline constexpr const char* output       = "output";
 inline constexpr const char* drift        = "drift";
 inline constexpr const char* reverbPos    = "reverbPosition";
+inline constexpr const char* transport    = "followTransport";
 } // namespace ParamIDs
 
 namespace TimeMapping
@@ -89,6 +90,7 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
                    + String (juce::roundToInt (TimeMapping::freeMs (v))) + " ms";
         })));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::sync, 1 }, "Tempo Sync", true));
+    layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::transport, 1 }, "Follow Transport", true));
 
     layout.add (std::make_unique<AudioParameterFloat> (
         ParameterID { ParamIDs::filter, 1 }, "Filter", NormalisableRange<float> (0.0f, 1.0f), 0.5f,

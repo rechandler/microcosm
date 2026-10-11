@@ -604,6 +604,55 @@ int main()
         std::printf ("visualizer: %d grain heads, %d taps%s\n", nv, nt, sane ? "" : "  <-- FAIL");
     }
 
+    // TRANSPORT: when the host stops, the effect fades out and forgets
+    // everything; on restart nothing from before the stop comes back, and
+    // the effect works again on new playing. A stop/start faster than the
+    // wipe must behave the same.
+    for (int a = 0; a < Engine::NumAlgos; ++a)
+    {
+        MicrocosmDsp dsp;
+        MicrocosmDsp::Global g;
+        g.mix = 1.0f;
+        g.space = 0.0f;
+        dsp.setGlobal (g); // before prepare, so Space starts at 0 (no reverb tail)
+        dsp.prepare (kSr, kBlock);
+        Engine::Params p;
+        p.algo = a;
+        p.activity = 0.7f;
+        p.repeats = 0.8f;
+        p.unitSamples = 0.5 * kSr;
+        dsp.setEngineParams (p);
+
+        auto phase = [&] (bool running, bool silent, double seconds, double measureFrom)
+        {
+            g.transportRunning = running;
+            dsp.setGlobal (g);
+            const int len = (int) (seconds * kSr);
+            std::vector<float> l (inL.begin(), inL.begin() + len), r (inR.begin(), inR.begin() + len);
+            if (silent)
+                std::fill (l.begin(), l.end(), 0.0f), std::fill (r.begin(), r.end(), 0.0f);
+            return run (dsp, l, r, (int) (measureFrom * kSr));
+        };
+
+        const auto first = phase (true, false, 3.0, 0.0);
+        const auto stopped = phase (false, false, 1.5, 0.5);   // guitar still playing
+        const bool wasStopped = dsp.isEffectStopped();
+        const auto after = phase (true, true, 2.0, 0.0);       // nothing may carry over
+        const auto again = phase (true, false, 3.0, 0.0);
+        phase (false, false, 0.3, 0.0);                        // quick stop/start
+        const auto quick = phase (true, true, 1.5, 0.0);
+        const auto back = phase (true, false, 3.0, 0.0);
+
+        const bool ok = first.rms > 0.003f && stopped.rms < 1.0e-5f && wasStopped && after.rms < 1.0e-5f
+                        && ! dsp.isEffectStopped() && again.rms > 0.003f && quick.rms < 1.0e-5f
+                        && back.rms > 0.003f && back.finite;
+        if (! ok)
+            ++failures;
+        std::printf ("transport %-8s: run %.4f  stopped %.6f  after %.6f  again %.4f  quick %.6f  back %.4f%s\n",
+                     Engine::algoName (a), first.rms, stopped.rms, after.rms, again.rms, quick.rms, back.rms,
+                     ok ? "" : "  <-- FAIL");
+    }
+
     std::printf ("\n%s (%d failures)\n", failures == 0 ? "ALL PASSED" : "FAILED", failures);
     return failures == 0 ? 0 : 1;
 }

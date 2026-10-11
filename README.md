@@ -63,6 +63,7 @@ Ripple, Arp and Drone react to note onsets in your playing. A detector picks up 
 | **Hold** | Freezes the audio the effect is working on, so it keeps generating from what you just played while you play over it. In the delays it becomes an infinite repeat. |
 | **Reverse** | Plays every loop, grain and tap backwards. |
 | **Output** | Output trim (dB). |
+| **Transport** | On (default): the effect runs only while Live is playing. Press stop and it fades out over about a quarter second and forgets its loops, grains and echoes (your dry guitar and the reverb tail carry on). Press play and it starts fresh, locked to Live's grid when Sync is on. Turn it off to keep the effect running with Live stopped. The standalone app has no transport, so the effect always runs there. |
 
 ### Factory presets
 
@@ -85,11 +86,12 @@ The panel at the bottom right shows what the engine is doing in real time:
 - **Dots:** one for each loop or grain currently playing, placed at the moment of your playing it is reading from.
   - Colour shows pitch: warm for octave up, teal for normal, blue for octave down. Height shows pitch too.
   - Size and brightness show how loud it is.
-  - A ring instead of a filled dot means it is playing in reverse.
+  - A ring instead of a filled dot means it is playing in reverse (shown in the legend as "reversed").
 - **"◀ N older":** heads reading from further back than 8 seconds, e.g. Shuffle replaying an older captured phrase, are
   counted at the left edge. Shuffle grabs a fresh phrase every 1 to ~16 cycles depending on Repeats (capped at about 12 s).
 - **Echo markers:** for Rhythm and Prism, one marker per echo tap at its delay time, sized by level.
 - **Hold:** with Hold on, the view freezes along with the audio.
+- **Stopped:** with Transport on and Live stopped, the view shows "STOPPED - press play".
 
 All parameters are automatable and can be MIDI-mapped in Live, and state is saved with your Live set.
 

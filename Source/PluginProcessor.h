@@ -61,6 +61,8 @@ public:
     int copyVoices (VizVoice* out) const;
     int copyTaps (VizTap* out) const;
     bool isVizFrozen() const { return vizFrozen.load(); }
+    // The host is stopped and TRANSPORT is on, so the effect is idle.
+    bool isTransportStopped() const { return transportStopped.load(); }
 
 private:
     void updateViz (const float* inL, const float* inR, bool before, int numSamples);
@@ -79,6 +81,7 @@ private:
     std::array<std::atomic<float>, kVizMaxTaps * 2> vizTaps {};
     std::atomic<int> vizTapCount { 0 };
     std::atomic<bool> vizFrozen { false };
+    std::atomic<bool> transportStopped { false };
     int currentProgram = 0;
 
     struct Raw
@@ -89,7 +92,7 @@ private:
         std::atomic<float>* filter; std::atomic<float>* resonance; std::atomic<float>* mix;
         std::atomic<float>* space; std::atomic<float>* reverbMode;
         std::atomic<float>* hold; std::atomic<float>* fxReverse; std::atomic<float>* output;
-        std::atomic<float>* drift; std::atomic<float>* reverbPos;
+        std::atomic<float>* drift; std::atomic<float>* reverbPos; std::atomic<float>* transport;
     } raw {};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MicrocosmProcessor)
