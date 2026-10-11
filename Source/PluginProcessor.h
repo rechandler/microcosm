@@ -39,6 +39,7 @@ public:
 private:
     // Declared before apvts: the Style parameter's text reads it.
     std::atomic<int> algoForParamText { 0 };
+    std::atomic<int> reverbForParamText { mc::Reverb::Hall };
 
 public:
     juce::AudioProcessorValueTreeState apvts;
@@ -60,6 +61,8 @@ public:
     void copyWaveforms (float* in, float* out) const;
     int copyVoices (VizVoice* out) const;
     int copyTaps (VizTap* out) const;
+    // Lets the editor refresh CHARACTER's text right after the reverb changes.
+    void setReverbForParamText (int mode) { reverbForParamText.store (mode); }
     bool isVizFrozen() const { return vizFrozen.load(); }
     // The host is stopped and TRANSPORT is on, so the effect is idle.
     bool isTransportStopped() const { return transportStopped.load(); }
@@ -93,6 +96,7 @@ private:
         std::atomic<float>* space; std::atomic<float>* reverbMode;
         std::atomic<float>* hold; std::atomic<float>* fxReverse; std::atomic<float>* output;
         std::atomic<float>* drift; std::atomic<float>* reverbPos; std::atomic<float>* transport;
+        std::atomic<float>* reverbChar;
     } raw {};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MicrocosmProcessor)

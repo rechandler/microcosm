@@ -21,6 +21,7 @@ Tessera is a granular, micro-loop, glitch and multidelay effect, inspired by the
   - Echoes: Rhythm, Prism
 - **Main controls:** Activity, Repeats and Shape, plus Time, which follows Live's tempo or can run free.
 - **Filter, Mix and Space**, with six reverbs: Glass, Velvet, Hall, Haze, **Shimmer** and **Cathedral**.
+- **Character:** one knob that shapes each reverb its own way: Air (Glass), Warmth (Velvet), Decay (Hall), Movement (Haze), Sparkle (Shimmer) and Bloom (Cathedral).
 - **Reverb Position:** after the effect, before it (the effect chops up the reverb wash) or on the effect only (dry guitar stays dry).
 - **Drift:** tape-style wow and flutter on the effect sound.
 - **Hold** (freeze) and **Reverse**.

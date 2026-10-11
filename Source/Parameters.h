@@ -24,6 +24,7 @@ inline constexpr const char* output       = "output";
 inline constexpr const char* drift        = "drift";
 inline constexpr const char* reverbPos    = "reverbPosition";
 inline constexpr const char* transport    = "followTransport";
+inline constexpr const char* reverbChar   = "reverbCharacter";
 } // namespace ParamIDs
 
 namespace TimeMapping
@@ -52,8 +53,10 @@ inline double freeMs (float knob) { return 50.0 * std::pow (40.0, (double) knob)
 } // namespace TimeMapping
 
 // algoForText: the currently selected algorithm, so the Style parameter can
-// show its name (e.g. "Shimmer") in the host instead of A-D.
-inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout (const std::atomic<int>* algoForText)
+// show its name (e.g. "Shimmer") in the host instead of A-D. reverbForText:
+// the current reverb mode, so Reverb Character shows e.g. "Sparkle 70%".
+inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout (const std::atomic<int>* algoForText,
+                                                                                  const std::atomic<int>* reverbForText)
 {
     using namespace juce;
     AudioProcessorValueTreeState::ParameterLayout layout;
@@ -114,6 +117,17 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     for (int i = 0; i < mc::MicrocosmDsp::NumReverbPositions; ++i)
         positions.add (mc::MicrocosmDsp::reverbPositionName (i));
     layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::reverbPos, 1 }, "Reverb Position", positions, 0));
+
+    layout.add (std::make_unique<AudioParameterFloat> (
+        ParameterID { ParamIDs::reverbChar, 1 }, "Reverb Character", NormalisableRange<float> (0.0f, 1.0f), 0.5f,
+        AudioParameterFloatAttributes().withStringFromValueFunction ([reverbForText] (float v, int)
+        {
+            const int mode = reverbForText != nullptr ? reverbForText->load() : mc::Reverb::Hall;
+            const String name (mc::Reverb::characterName (mode));
+            if (mode == mc::Reverb::Hall)
+                return name + " " + String (mc::Reverb::hallDecaySeconds (v), 1) + " s";
+            return name + " " + String (juce::roundToInt (v * 100.0f)) + "%";
+        })));
 
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::hold, 1 }, "Hold", false));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::fxReverse, 1 }, "FX Reverse", false));

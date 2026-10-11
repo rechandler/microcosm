@@ -33,6 +33,7 @@ public:
         float mix = 0.5f;        // 0 dry .. 1 wet
         float space = 0.25f;     // reverb amount
         int reverbMode = Reverb::Hall;
+        float reverbCharacter = 0.5f; // per-mode CHARACTER knob, 0.5 = standard
         int reverbPosition = ReverbAfter;
         float drift = 0.0f;      // tape wow/flutter on the effect signal
         float outputGain = 1.0f; // linear
@@ -81,6 +82,7 @@ public:
     {
         g = gl;
         reverb.setMode (g.reverbMode);
+        reverb.setCharacter (g.reverbCharacter);
     }
 
     // True once a stopped transport has faded the effect out and cleared it.

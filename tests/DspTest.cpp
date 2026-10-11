@@ -653,6 +653,82 @@ int main()
                      ok ? "" : "  <-- FAIL");
     }
 
+    // Reverb CHARACTER: every mode at both extremes must stay stable and
+    // bounded, keep its level near the standard sound, still die away, and
+    // actually change the sound. A full sweep mid-tail must stay clean.
+    {
+        const int len = (int) (kSr * 30.0);
+        for (int m = 0; m < Reverb::NumModes; ++m)
+        {
+            struct Result { float level, bright, tail, peak; bool finite; std::vector<float> out; };
+            auto measure = [&] (float c, bool sweep)
+            {
+                Reverb rv;
+                rv.prepare (kSr);
+                rv.setMode (m);
+                rv.setCharacter (c);
+                rv.prepare (kSr); // start settled at this character
+                rv.setMode (m);
+                Result res { 0, 0, 0, 0, true, {} };
+                res.out.resize ((size_t) len);
+                double eLevel = 0, eDiff = 0, eTail = 0;
+                uint32_t noiseSeed = 12345u;
+                float prev = 0.0f;
+                for (int i = 0; i < len; ++i)
+                {
+                    if (sweep)
+                        rv.setCharacter ((float) std::fmod ((double) i / (kSr * 4.0), 1.0));
+                    // Guitar-like plucks: the notes plus a bright noise attack.
+                    noiseSeed = noiseSeed * 1664525u + 1013904223u;
+                    const float noise = (float) (noiseSeed >> 9) / 4194304.0f - 1.0f;
+                    const float x = i < (int) (kSr * 2.0)
+                                        ? inL[(size_t) i] + 0.2f * noise * std::exp (-(float) (i % 24000) / (0.01f * (float) kSr))
+                                        : 0.0f;
+                    float l, r;
+                    rv.process (x, x, l, r);
+                    if (! std::isfinite (l) || ! std::isfinite (r))
+                        res.finite = false;
+                    res.peak = std::max (res.peak, std::max (std::abs (l), std::abs (r)));
+                    res.out[(size_t) i] = l;
+                    if (i < (int) (kSr * 4.0))
+                    {
+                        eLevel += (double) l * l;
+                        eDiff += (double) (l - prev) * (l - prev);
+                    }
+                    if (i >= (int) (kSr * 25.0))
+                        eTail += (double) l * l;
+                    prev = l;
+                }
+                res.level = 10.0f * std::log10 ((float) (eLevel / (kSr * 4.0)) + 1.0e-20f);
+                res.bright = 10.0f * std::log10 ((float) (eDiff / (eLevel + 1.0e-20)) + 1.0e-20f);
+                res.tail = 10.0f * std::log10 ((float) (eTail / (kSr * 5.0)) + 1.0e-20f);
+                return res;
+            };
+            const auto lo = measure (0.0f, false), mid = measure (0.5f, false), hi = measure (1.0f, false);
+            const auto sw = measure (0.0f, true);
+            auto differs = [&] (const Result& a)
+            {
+                double e = 0, d = 0;
+                for (int i = 0; i < (int) (kSr * 6.0); ++i)
+                {
+                    e += (double) mid.out[(size_t) i] * mid.out[(size_t) i];
+                    const double x = a.out[(size_t) i] - mid.out[(size_t) i];
+                    d += x * x;
+                }
+                return d > 0.05 * e;
+            };
+            bool ok = sw.finite && sw.peak < 3.9f;
+            for (const auto* r : { &lo, &mid, &hi })
+                ok = ok && r->finite && r->peak < 3.9f && std::abs (r->level - mid.level) < 6.0f && r->tail < r->level - 30.0f;
+            ok = ok && differs (lo) && differs (hi);
+            if (! ok)
+                ++failures;
+            std::printf ("reverb %-9s %-8s: level %5.1f/%5.1f/%5.1f dB  bright %5.1f/%5.1f/%5.1f  tail %6.1f/%6.1f/%6.1f  sweep peak %.2f%s\n",
+                         Reverb::modeName (m), Reverb::characterName (m), lo.level, mid.level, hi.level,
+                         lo.bright, mid.bright, hi.bright, lo.tail, mid.tail, hi.tail, sw.peak, ok ? "" : "  <-- FAIL");
+        }
+    }
+
     std::printf ("\n%s (%d failures)\n", failures == 0 ? "ALL PASSED" : "FAILED", failures);
     return failures == 0 ? 0 : 1;
 }

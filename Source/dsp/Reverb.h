@@ -22,6 +22,16 @@ public:
         return names[std::min (std::max (m, 0), NumModes - 1)];
     }
 
+    // CHARACTER: one knob that shapes each mode its own way. 0.5 is the
+    // mode's standard sound.
+    static const char* characterName (int m)
+    {
+        static const char* names[NumModes] = { "Air", "Warmth", "Decay", "Movement", "Sparkle", "Bloom" };
+        return names[std::min (std::max (m, 0), NumModes - 1)];
+    }
+
+    static float hallDecaySeconds (float c) { return 2.0f * std::pow (5.0f, c); } // 2 s .. 10 s
+
     void prepare (double sampleRate)
     {
         sr = (float) sampleRate;
@@ -32,7 +42,7 @@ public:
         for (auto& a : diffusers)
             for (auto& ch : a)
                 ch.buf.assign ((size_t) maxAp, 0.0f), ch.mask = maxAp - 1, ch.pos = 0;
-        const int maxPre = nextPowerOfTwo ((int) (sampleRate * 0.1));
+        const int maxPre = nextPowerOfTwo ((int) (sampleRate * 2.0)); // pre-delay + Bloom spread
         for (auto& p : pre)
             p.assign ((size_t) maxPre, 0.0f);
         preMask = maxPre - 1;
@@ -49,8 +59,14 @@ public:
         shimAA.reset();
         shimHpCoeff = 1.0f - std::exp (-kTwoPi * 250.0f / sr);
         shimHp = 0.0f;
+        tiltLpL = tiltLpR = 0.0f;
+        tiltCoeff = 1.0f - std::exp (-kTwoPi * 2000.0f / sr);
         currentMode = -1;
         setMode (Hall);
+        characterNow = characterTarget;
+        applyCharacter();
+        preDelayNow = preDelayTarget;
+        bloomNow = bloomTarget;
     }
 
     void reset()
@@ -65,7 +81,10 @@ public:
         std::fill (shimBuf.begin(), shimBuf.end(), 0.0f);
         shimAA.reset();
         shimHp = 0.0f;
+        tiltLpL = tiltLpR = 0.0f;
     }
+
+    void setCharacter (float c) { characterTarget = std::min (1.0f, std::max (0.0f, c)); }
 
     void setMode (int mode)
     {
@@ -73,7 +92,6 @@ public:
             return;
         currentMode = mode;
 
-        struct Settings { float size, rt60, damp, predelay, modDepth, diffusion, shimmer; };
         static const Settings settings[NumModes] = {
             { 0.30f,  0.8f, 12000.0f, 0.004f, 0.0002f, 0.55f, 0.0f }, // Glass: small, bright room
             { 0.65f,  2.2f,  2800.0f, 0.015f, 0.0006f, 0.65f, 0.0f }, // Velvet: medium, dark
@@ -82,38 +100,61 @@ public:
             { 1.20f, 10.0f,  7500.0f, 0.030f, 0.0015f, 0.72f, 1.0f }, // Shimmer
             { 1.70f,  9.0f,  8500.0f, 0.060f, 0.0018f, 0.78f, 0.0f }, // Cathedral
         };
-        const auto& s = settings[std::min (std::max (mode, 0), NumModes - 1)];
+        base = settings[std::min (std::max (mode, 0), NumModes - 1)];
+        const auto& s = base;
 
         // Mutually prime-ish base lengths in ms.
         static const float baseMs[8] = { 37.1f, 41.3f, 47.9f, 53.3f, 61.1f, 67.7f, 73.9f, 83.3f };
         for (size_t i = 0; i < lines.size(); ++i)
         {
             auto& l = lines[i];
-            l.length = std::min ((float) (l.mask - 64), baseMs[i] * 0.001f * sr * (0.6f + 1.6f * s.size));
-            l.gain = std::pow (10.0f, -3.0f * (l.length / sr) / s.rt60);
-            l.modDepth = s.modDepth * sr;
+            // Leave room for the deepest modulation (Haze at full Movement).
+            l.length = std::min ((float) l.mask - 0.012f * sr - 64.0f, baseMs[i] * 0.001f * sr * (0.6f + 1.6f * s.size));
             l.modRate = 0.11f + 0.07f * (float) i;
         }
-        dampCoeff = std::exp (-kTwoPi * s.damp / sr);
-        shimmerAmount = s.shimmer;
-        outputGain = s.shimmer > 0.0f ? 0.55f : 1.0f; // match the other modes' loudness
-        preDelay = std::max (1, (int) (s.predelay * sr));
-        diffusion = s.diffusion;
 
         static const float apMs[4] = { 4.7f, 3.6f, 12.7f, 9.3f };
         for (size_t i = 0; i < diffusers.size(); ++i)
             for (size_t c = 0; c < 2; ++c)
                 diffusers[i][c].length = std::min (diffusers[i][c].mask - 1,
                                                    (int) (apMs[i] * (c == 0 ? 1.0f : 1.13f) * 0.001f * sr));
+        applyCharacter();
     }
 
     void process (float inL, float inR, float& outL, float& outR)
     {
-        // Pre-delay
+        // CHARACTER glides, so sweeping the knob never zippers.
+        if (--characterCounter <= 0)
+        {
+            characterCounter = 32;
+            const float d = characterTarget - characterNow;
+            if (std::abs (d) > 1.0e-4f)
+            {
+                characterNow += std::abs (d) < 0.002f ? d : 0.06f * d;
+                applyCharacter();
+            }
+        }
+
+        // Pre-delay (glides when Bloom changes it). Bloom spreads the input
+        // over several feeds with rising levels, so each note builds into
+        // the space gradually instead of arriving all at once.
         pre[0][(size_t) prePos] = inL;
         pre[1][(size_t) prePos] = inR;
-        const int rp = (prePos - preDelay) & preMask;
-        float xl = pre[0][(size_t) rp], xr = pre[1][(size_t) rp];
+        preDelayNow += 0.0005f * (preDelayTarget - preDelayNow);
+        bloomNow += 0.0005f * (bloomTarget - bloomNow);
+        float xl = 0.0f, xr = 0.0f;
+        const int feeds = bloomNow > 1.0f ? kBloomFeeds : 1;
+        for (int j = 0; j < feeds; ++j)
+        {
+            const float frac = feeds == 1 ? 0.0f : (float) j / (float) (kBloomFeeds - 1);
+            const float g = feeds == 1 ? 1.0f : bloomGain[(size_t) j];
+            const float rpos = (float) prePos - preDelayNow - bloomNow * frac;
+            const float rfl = std::floor (rpos);
+            const int ri = (int) rfl;
+            const float rt = rpos - rfl;
+            xl += g * lerp (pre[0][(size_t) (ri & preMask)], pre[0][(size_t) ((ri + 1) & preMask)], rt);
+            xr += g * lerp (pre[1][(size_t) (ri & preMask)], pre[1][(size_t) ((ri + 1) & preMask)], rt);
+        }
         prePos = (prePos + 1) & preMask;
 
         // Input diffusion
@@ -149,6 +190,14 @@ public:
         const float tapL = outL, tapR = outR;
         outL *= outputGain;
         outR *= outputGain;
+        if (tilt != 1.0f)
+        {
+            // Tone tilt around 2 kHz (Air, Warmth).
+            tiltLpL += tiltCoeff * (outL - tiltLpL);
+            tiltLpR += tiltCoeff * (outR - tiltLpR);
+            outL = tiltLpL + tilt * (outL - tiltLpL);
+            outR = tiltLpR + tilt * (outR - tiltLpR);
+        }
 
         // Shimmer: pitch the tail up an octave and feed it back in, so every
         // pass through the reverb climbs higher.
@@ -170,6 +219,55 @@ public:
     }
 
 private:
+    struct Settings { float size, rt60, damp, predelay, modDepth, diffusion, shimmer; };
+
+    // Derives the live settings from the mode and CHARACTER (k = -1..1,
+    // 0 = the mode's standard sound). Only touches things that can change
+    // mid-tail without artefacts: decay, damping, modulation, shimmer
+    // feedback, pre-delay (glided) and the input swell.
+    void applyCharacter()
+    {
+        const float c = characterNow;
+        const float k = 2.0f * c - 1.0f;
+        float rt60 = base.rt60, damp = base.damp, modDepth = base.modDepth, shim = base.shimmer;
+        float predelay = base.predelay, diff = base.diffusion, bloomSeconds = 0.0f, tiltAmount = 1.0f;
+        switch (currentMode)
+        {
+            case Glass:     damp = base.damp * std::pow (2.0f, 2.5f * k);                    // dull wood .. sparkling glass
+                            tiltAmount = std::pow (2.0f, 1.8f * k); break;
+            case Velvet:    damp = base.damp * std::pow (2.0f, 1.6f * k);                    // murky .. smooth
+                            tiltAmount = std::pow (2.0f, 1.0f * k); break;
+            case Hall:      rt60 = hallDecaySeconds (c); break;                              // 2 s .. 10 s
+            case Haze:      modDepth = base.modDepth * std::pow (4.0f, k); break;            // still .. seasick
+            case Shimmer:   shim = base.shimmer * (1.0f + 0.75f * k);                        // faint halo .. rising choir
+                            damp = base.damp * std::pow (2.0f, k); break;
+            case Cathedral:
+                if (k < 0.0f)
+                    predelay = lerp (base.predelay, 0.005f, -k);                             // instant
+                else
+                {
+                    predelay = lerp (base.predelay, 0.095f, k);                              // distant, slow swell
+                    diff = lerp (base.diffusion, 0.86f, k);
+                    bloomSeconds = 1.5f * k;
+                }
+                break;
+            default: break;
+        }
+
+        for (auto& l : lines)
+        {
+            l.gain = std::pow (10.0f, -3.0f * (l.length / sr) / rt60);
+            l.modDepth = modDepth * sr;
+        }
+        dampCoeff = std::exp (-kTwoPi * std::min (damp, 0.45f * sr) / sr);
+        shimmerAmount = shim;
+        outputGain = shim > 0.0f ? 0.55f / (0.45f + 0.55f * shim) : 1.0f; // match the other modes' loudness
+        preDelayTarget = std::min ((float) preMask - 2.0f, std::max (1.0f, predelay * sr));
+        diffusion = diff;
+        bloomTarget = std::min ((float) preMask - preDelayTarget - 4.0f, bloomSeconds * sr);
+        tilt = tiltAmount;
+    }
+
     // Octave-up pitch shifter on a band-limited, low-cut copy of the tail.
     float shimmer (float x)
     {
@@ -222,7 +320,18 @@ private:
     std::array<Line, 8> lines;
     std::array<std::array<Allpass, 2>, 4> diffusers;
     std::vector<float> pre[2];
-    int preMask = 0, prePos = 0, preDelay = 1;
+    int preMask = 0, prePos = 0;
+    float preDelayNow = 1.0f, preDelayTarget = 1.0f;
+    Settings base {};
+    float characterTarget = 0.5f, characterNow = 0.5f;
+    int characterCounter = 0;
+    static constexpr int kBloomFeeds = 12;
+    // Rising feed levels (a crescendo), summing to about the same energy
+    // as the single feed they replace.
+    static constexpr std::array<float, kBloomFeeds> bloomGain { 0.04f, 0.07f, 0.10f, 0.13f, 0.16f, 0.19f,
+                                                                0.22f, 0.25f, 0.28f, 0.31f, 0.34f, 0.37f };
+    float bloomNow = 0.0f, bloomTarget = 0.0f;
+    float tilt = 1.0f, tiltCoeff = 0.25f, tiltLpL = 0.0f, tiltLpR = 0.0f;
     float dampCoeff = 0.5f, diffusion = 0.7f;
     int currentMode = -1;
     std::vector<float> shimBuf;

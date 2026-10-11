@@ -61,6 +61,7 @@ private:
 
     void timerCallback() override;
     void refreshSelectionButtons();
+    void refreshCharacterLabel();
     void setupKnob (Knob&, const char* paramId, const juce::String& name, bool small);
     void setupToggle (juce::TextButton&, std::unique_ptr<ButtonAttachment>&, const char* paramId, const juce::String& text);
     void setChoice (const char* paramId, int index);
@@ -70,7 +71,8 @@ private:
     MicrocosmLookAndFeel lnf;
 
     Knob activity, repeats, shape, time, filter, mix, space, drift;
-    Knob resonance, output;
+    Knob resonance, output, character;
+    int characterMode = -1;
     juce::ComboBox presetBox;
     juce::Label presetLabel;
 

@@ -6,14 +6,15 @@ MicrocosmProcessor::MicrocosmProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput ("Input", juce::AudioChannelSet::stereo(), true)
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "PARAMS", createParameterLayout (&algoForParamText))
+      apvts (*this, nullptr, "PARAMS", createParameterLayout (&algoForParamText, &reverbForParamText))
 {
     auto p = [this] (const char* id) { return apvts.getRawParameterValue (id); };
     raw = { p (ParamIDs::algo), p (ParamIDs::variation), p (ParamIDs::activity), p (ParamIDs::repeats),
             p (ParamIDs::shape), p (ParamIDs::time), p (ParamIDs::sync), p (ParamIDs::filter),
             p (ParamIDs::resonance), p (ParamIDs::mix), p (ParamIDs::space), p (ParamIDs::reverbMode),
             p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output), p (ParamIDs::drift),
-            p (ParamIDs::reverbPos), p (ParamIDs::transport) };
+            p (ParamIDs::reverbPos), p (ParamIDs::transport),
+            p (ParamIDs::reverbChar) };
 }
 
 bool MicrocosmProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -178,6 +179,8 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     g.mix = raw.mix->load();
     g.space = raw.space->load();
     g.reverbMode = (int) raw.reverbMode->load();
+    reverbForParamText.store (g.reverbMode);
+    g.reverbCharacter = raw.reverbChar->load();
     g.reverbPosition = (int) raw.reverbPos->load();
     g.drift = raw.drift->load();
     g.outputGain = juce::Decibels::decibelsToGain (raw.output->load());
@@ -253,6 +256,7 @@ void MicrocosmProcessor::setCurrentProgram (int index)
     set (ParamIDs::space, pr.space);
     set (ParamIDs::reverbMode, (float) pr.reverbMode);
     set (ParamIDs::reverbPos, (float) pr.reverbPosition);
+    set (ParamIDs::reverbChar, pr.reverbCharacter);
     set (ParamIDs::drift, pr.drift);
     set (ParamIDs::fxReverse, pr.reverse ? 1.0f : 0.0f);
     set (ParamIDs::hold, 0.0f);

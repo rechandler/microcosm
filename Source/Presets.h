@@ -17,6 +17,7 @@ struct Preset
     float drift;
     bool reverse;
     int reverbPosition = mc::MicrocosmDsp::ReverbAfter;
+    float reverbCharacter = 0.5f; // the reverb's standard sound
 };
 
 // Filter knob positions for a given readout ("HP 35%" -> hp (0.35f)).

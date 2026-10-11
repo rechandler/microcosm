@@ -91,6 +91,9 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     setupKnob (drift, ParamIDs::drift, "DRIFT", false);
     setupKnob (resonance, ParamIDs::resonance, "RESONANCE", true);
     setupKnob (output, ParamIDs::output, "OUTPUT", true);
+    setupKnob (character, ParamIDs::reverbChar, "CHARACTER", true);
+    character.slider.setTooltip ("Shapes the selected reverb: Air, Warmth, Decay, Movement, Sparkle or Bloom");
+    refreshCharacterLabel();
     filter.slider.getProperties().set ("bipolar", true);
 
     auto setupCombo = [this] (ComboBox& box, Label& label, const char* id, const String& name,
@@ -214,12 +217,26 @@ void MicrocosmEditor::refreshSelectionButtons()
     }
 }
 
+// CHARACTER is named after what it does for the selected reverb.
+void MicrocosmEditor::refreshCharacterLabel()
+{
+    const int mode = (int) proc.apvts.getRawParameterValue (ParamIDs::reverbMode)->load();
+    if (mode == characterMode)
+        return;
+    characterMode = mode;
+    proc.setReverbForParamText (mode);
+    character.label.setText (String (mc::Reverb::characterName (mode)).toUpperCase(), dontSendNotification);
+    character.slider.updateText();
+}
+
 void MicrocosmEditor::timerCallback()
 {
     if (presetBox.getSelectedId() != proc.getCurrentProgram() + 1)
         presetBox.setSelectedId (proc.getCurrentProgram() + 1, dontSendNotification);
 
     refreshSelectionButtons();
+
+    refreshCharacterLabel();
 
     if (proc.onsetFlash.exchange (false))
         onsetGlow = 1.0f;
@@ -357,8 +374,8 @@ void MicrocosmEditor::resized()
     l.removeFromTop (12);
 
     auto row3 = l.removeFromTop (104);
-    for (auto* k : { &resonance, &output })
-        layoutKnob (*k, row3.removeFromLeft (kw).reduced (12, 2));
+    for (auto* k : { &resonance, &output, &character })
+        layoutKnob (*k, row3.removeFromLeft (82).reduced (2, 2));
     auto reverbBox = row3.reduced (10, 0).withSizeKeepingCentre (row3.getWidth() - 20, 98);
     reverbLabel.setBounds (reverbBox.removeFromTop (18));
     reverbMode.setBounds (reverbBox.removeFromTop (26));
