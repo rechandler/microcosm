@@ -73,9 +73,9 @@ private:
     juce::ComboBox presetBox;
     juce::Label presetLabel;
 
-    juce::ComboBox reverbMode;
-    juce::Label reverbLabel;
-    std::unique_ptr<ComboAttachment> reverbAtt;
+    juce::ComboBox reverbMode, reverbPosition;
+    juce::Label reverbLabel, reverbPosLabel;
+    std::unique_ptr<ComboAttachment> reverbAtt, reverbPosAtt;
 
     juce::TextButton syncBtn, holdBtn, reverseBtn;
     std::unique_ptr<ButtonAttachment> syncAtt, holdAtt, reverseAtt;

@@ -1,7 +1,6 @@
 #pragma once
 
-#include "dsp/Engine.h"
-#include "dsp/Reverb.h"
+#include "dsp/MicrocosmDsp.h"
 
 // Factory presets: cinematic starting points for guitar. Each sets the
 // effect and sound-shaping controls; the looper is left alone.
@@ -17,6 +16,7 @@ struct Preset
     int reverbMode;
     float drift;
     bool reverse;
+    int reverbPosition = mc::MicrocosmDsp::ReverbAfter;
 };
 
 // Filter knob positions for a given readout ("HP 35%" -> hp (0.35f)).
@@ -26,6 +26,8 @@ constexpr float open = 0.5f;
 
 using E = mc::Engine;
 using R = mc::Reverb;
+constexpr int before = mc::MicrocosmDsp::ReverbBefore;
+constexpr int effectOnly = mc::MicrocosmDsp::ReverbEffectOnly;
 
 inline const Preset list[] = {
     // name                 algo         var  act    rep    shape  time filter     res    mix    space  reverb        drift  rev
@@ -41,6 +43,10 @@ inline const Preset list[] = {
     { "Crystal Arp",        E::Arp,       1, 0.50f, 0.60f, 0.40f, 6, hp (0.30f), 0.15f, 0.45f, 0.60f, R::Shimmer,   0.10f, false },
     { "Distant Signal",     E::Blocks,    2, 0.50f, 0.50f, 0.70f, 8, lp (0.25f), 0.30f, 0.50f, 0.70f, R::Ambient,   0.50f, false },
     { "Infinite Pad",       E::Tunnel,    0, 0.60f, 1.00f, 1.00f, 9, open,      0.10f, 0.70f, 0.90f, R::Shimmer,   0.30f, false },
+    // Reverb before the effect: grains drawn from a reverb wash.
+    { "Cloud Choir",        E::Haze,      0, 0.70f, 0.75f, 0.75f, 6, lp (0.10f), 0.10f, 0.70f, 0.60f, R::Cathedral, 0.25f, false, before },
+    // Reverb on the effect only: dry guitar stays clear in front of a shimmer halo.
+    { "Clean Halo",         E::Warp,      2, 0.00f, 0.60f, 0.60f, 9, hp (0.35f), 0.15f, 0.50f, 0.85f, R::Shimmer,   0.15f, false, effectOnly },
 };
 
 inline constexpr int count = (int) (sizeof (list) / sizeof (list[0]));

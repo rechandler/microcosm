@@ -12,7 +12,8 @@ MicrocosmProcessor::MicrocosmProcessor()
     raw = { p (ParamIDs::algo), p (ParamIDs::variation), p (ParamIDs::activity), p (ParamIDs::repeats),
             p (ParamIDs::shape), p (ParamIDs::time), p (ParamIDs::sync), p (ParamIDs::filter),
             p (ParamIDs::resonance), p (ParamIDs::mix), p (ParamIDs::space), p (ParamIDs::reverbMode),
-            p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output), p (ParamIDs::drift) };
+            p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output), p (ParamIDs::drift),
+            p (ParamIDs::reverbPos) };
 }
 
 bool MicrocosmProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -174,6 +175,7 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     g.mix = raw.mix->load();
     g.space = raw.space->load();
     g.reverbMode = (int) raw.reverbMode->load();
+    g.reverbPosition = (int) raw.reverbPos->load();
     g.drift = raw.drift->load();
     g.outputGain = juce::Decibels::decibelsToGain (raw.output->load());
     dsp.setGlobal (g);
@@ -244,6 +246,7 @@ void MicrocosmProcessor::setCurrentProgram (int index)
     set (ParamIDs::mix, pr.mix);
     set (ParamIDs::space, pr.space);
     set (ParamIDs::reverbMode, (float) pr.reverbMode);
+    set (ParamIDs::reverbPos, (float) pr.reverbPosition);
     set (ParamIDs::drift, pr.drift);
     set (ParamIDs::fxReverse, pr.reverse ? 1.0f : 0.0f);
     set (ParamIDs::hold, 0.0f);

@@ -21,10 +21,11 @@ Macrocosm is a granular, micro-loop, glitch and multidelay effect, inspired by t
   - Multidelay: Pattern, Warp
 - **Main controls:** Activity, Repeats and Shape, plus Time, which follows Live's tempo or can run free.
 - **Filter, Mix and Space**, with six reverbs: Bright Room, Dark Medium, Large Hall, Ambient, **Shimmer** and **Cathedral**.
+- **Reverb Position:** after the effect, before it (the effect chops up the reverb wash) or on the effect only (dry guitar stays dry).
 - **Drift:** tape-style wow and flutter on the effect sound.
 - **Hold** (freeze) and **Reverse**.
 - **Engine View:** a live display of your playing, the effect output, every active loop and grain (by position, pitch and level) and the delay taps.
-- **12 factory presets**, including Shimmer Cathedral, Frozen Swell, Reverse Bloom, Granular Choir and Infinite Pad.
+- **14 factory presets**, including Shimmer Cathedral, Frozen Swell, Reverse Bloom, Infinite Pad, Cloud Choir and Clean Halo.
 - **Clean octave-up:**
   - Band-limited playback means pitched-up loops and grains don't alias.
   - A waveform-aligned pitch shifter keeps sustained notes clean in Warp and Shimmer.

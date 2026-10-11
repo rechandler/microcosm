@@ -58,6 +58,7 @@ Strum, Arp and Tunnel react to note onsets in your playing. A detector picks up 
 | **Filter** | Centre is open. Left is a low-pass, right is a high-pass. **Resonance** sets the peak. Applies to the effect only. |
 | **Mix** | Dry/wet. At the centre both are at full level, as on the pedal. |
 | **Space** | Reverb amount. **Reverb** mode: Bright Room, Dark Medium, Large Hall, Ambient, plus **Shimmer** (octave-up pitch shifting inside the reverb, so the tail keeps rising) and **Cathedral** (huge and long). |
+| **Reverb Position** | Where Space sits: **After effect** (guitar and effect share one space), **Before effect** (the effect works on the reverberated guitar, giving dense, smooth pads), or **Effect only** (your dry guitar stays dry and clear while the textures sit in the space). |
 | **Drift** | Tape-style wow, flutter and slow pitch wander on the effect, slightly different per side. Around 15–40% gives gentle movement; higher gives lo-fi warble. |
 | **Hold** | Freezes the audio the effect is working on, so it keeps generating from what you just played while you play over it. In the delays it becomes an infinite repeat. |
 | **Reverse** | Plays every loop, grain and tap backwards. |
@@ -67,7 +68,7 @@ Strum, Arp and Tunnel react to note onsets in your playing. A detector picks up 
 
 Pick these from the **Preset** menu at the top of the plugin, or from Live's program list. They're cinematic starting points for guitar:
 Shimmer Cathedral, Frozen Swell, Reverse Bloom, Granular Choir, Tape Memory, Octave Clouds, Rising Tide, Ghost Echoes,
-Crystal Arp, Distant Signal and Infinite Pad. Choosing one sets the effect and sound controls.
+Crystal Arp, Distant Signal, Infinite Pad, Cloud Choir (reverb before the effect) and Clean Halo (reverb on the effect only). Choosing one sets the effect and sound controls.
 
 ### Sound quality notes
 

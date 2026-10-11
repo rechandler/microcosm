@@ -11,9 +11,21 @@ namespace mc
 //   in ─┬──────────────────────────────── dry ──┐
 //       │                                        ├─ MIX ─ SPACE ─ OUTPUT ─ out
 //       └─ ENGINE (11 algos) ─ DRIFT ─ FILTER ─ wet ┘
+//
+// SPACE (the reverb) can sit after the mix (default), before the effect (the
+// engine then works on the reverberated signal), or on the effect only (the
+// dry guitar stays dry).
 class MicrocosmDsp
 {
 public:
+    enum ReverbPosition { ReverbAfter = 0, ReverbBefore, ReverbEffectOnly, NumReverbPositions };
+
+    static const char* reverbPositionName (int p)
+    {
+        static const char* names[NumReverbPositions] = { "After effect", "Before effect", "Effect only" };
+        return names[std::min (std::max (p, 0), NumReverbPositions - 1)];
+    }
+
     struct Global
     {
         float filter = 0.5f;     // 0 = dark LP, 0.5 = open, 1 = thin HP
@@ -21,6 +33,7 @@ public:
         float mix = 0.5f;        // 0 dry .. 1 wet
         float space = 0.25f;     // reverb amount
         int reverbMode = Reverb::LargeHall;
+        int reverbPosition = ReverbAfter;
         float drift = 0.0f;      // tape wow/flutter on the effect signal
         float outputGain = 1.0f; // linear
     };
@@ -91,6 +104,12 @@ private:
         std::copy (L, L + n, dl);
         std::copy (R, R + n, dr);
 
+        // Reverb before the effect: both the dry path and the engine get the
+        // reverberated guitar.
+        if (g.reverbPosition == ReverbBefore)
+            for (int i = 0; i < n; ++i)
+                applySpace (dl[i], dr[i]);
+
         // 1. Effect engine
         engine.process (dl, dr, wetL.data(), wetR.data(), duck.data(), n);
 
@@ -121,6 +140,9 @@ private:
                 wr = svf[1].process (wr, type);
             }
 
+            if (g.reverbPosition == ReverbEffectOnly)
+                applySpace (wl, wr);
+
             const float m = mixS.process (g.mix);
             const float wetGain = std::min (1.0f, 2.0f * m);
             // INTERRUPT mutes the dry while its bursts play, but only as far as
@@ -129,20 +151,28 @@ private:
             float ol = dl[i] * dryGain + wl * wetGain;
             float orr = dr[i] * dryGain + wr * wetGain;
 
-            const float s = spaceS.process (g.space);
-            if (s > 0.0005f || reverbTail > 0)
-            {
-                float rl, rr;
-                reverb.process (ol * s, orr * s, rl, rr);
-                const float dryKeep = 1.0f - 0.3f * s;
-                ol = ol * dryKeep + rl * 1.2f;
-                orr = orr * dryKeep + rr * 1.2f;
-                reverbTail = s > 0.0005f ? (int) (20.0f * sr) : reverbTail - 1;
-            }
+            if (g.reverbPosition == ReverbAfter)
+                applySpace (ol, orr);
 
             const float og = outS.process (g.outputGain);
             L[i] = sanitize (ol * og);
             R[i] = sanitize (orr * og);
+        }
+    }
+
+    // SPACE: blends the reverb into the signal in place (one call per sample,
+    // at whichever point of the chain the reverb sits).
+    void applySpace (float& l, float& r)
+    {
+        const float s = spaceS.process (g.space);
+        if (s > 0.0005f || reverbTail > 0)
+        {
+            float rl, rr;
+            reverb.process (l * s, r * s, rl, rr);
+            const float dryKeep = 1.0f - 0.3f * s;
+            l = l * dryKeep + rl * 1.2f;
+            r = r * dryKeep + rr * 1.2f;
+            reverbTail = s > 0.0005f ? (int) (20.0f * sr) : reverbTail - 1;
         }
     }
 

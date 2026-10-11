@@ -84,7 +84,7 @@ private:
         std::atomic<float>* filter; std::atomic<float>* resonance; std::atomic<float>* mix;
         std::atomic<float>* space; std::atomic<float>* reverbMode;
         std::atomic<float>* hold; std::atomic<float>* fxReverse; std::atomic<float>* output;
-        std::atomic<float>* drift;
+        std::atomic<float>* drift; std::atomic<float>* reverbPos;
     } raw {};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MicrocosmProcessor)

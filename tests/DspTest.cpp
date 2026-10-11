@@ -281,6 +281,7 @@ int main()
             g.space = pr.space;
             g.reverbMode = pr.reverbMode;
             g.drift = pr.drift;
+            g.reverbPosition = pr.reverbPosition;
             dsp.setGlobal (g);
             Engine::Params p;
             p.algo = pr.algo;
@@ -505,6 +506,42 @@ int main()
         {
             ++failures;
             std::printf ("mix 0%% %s: dry changed by %.2f dB  <-- FAIL\n", Engine::algoName (a), diffDb);
+        }
+    }
+
+    // Reverb position: "Effect only" must leave the dry untouched at Mix 0%
+    // even with Space up, and every position must stay finite and bounded.
+    for (int pos = 0; pos < MicrocosmDsp::NumReverbPositions; ++pos)
+    {
+        for (float mixV : { 0.0f, 0.5f, 1.0f })
+        {
+            MicrocosmDsp dsp;
+            dsp.prepare (kSr, kBlock);
+            MicrocosmDsp::Global g;
+            g.mix = mixV;
+            g.space = 0.8f;
+            g.reverbMode = Reverb::Shimmer;
+            g.reverbPosition = pos;
+            dsp.setGlobal (g);
+            Engine::Params p;
+            p.algo = Engine::Haze;
+            dsp.setEngineParams (p);
+            std::vector<float> l (inL.begin(), inL.begin() + (int) kSr * 4), r (inR.begin(), inR.begin() + (int) kSr * 4);
+            const auto st = run (dsp, l, r);
+            bool ok = st.finite && st.peak < 3.9f && st.rms > 0.005f;
+            if (pos == MicrocosmDsp::ReverbEffectOnly && mixV == 0.0f)
+            {
+                double eIn = 0;
+                for (int k = 0; k < (int) kSr * 4; ++k)
+                    eIn += (double) inL[(size_t) k] * inL[(size_t) k];
+                ok = ok && std::abs (20.0f * std::log10 (st.rms / (float) std::sqrt (eIn / (kSr * 4)))) < 0.1f;
+            }
+            if (! ok)
+            {
+                ++failures;
+                std::printf ("reverb position %s, mix %.0f%%: rms=%.4f peak=%.2f  <-- FAIL\n",
+                             MicrocosmDsp::reverbPositionName (pos), mixV * 100.0f, st.rms, st.peak);
+            }
         }
     }
 

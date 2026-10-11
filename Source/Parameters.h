@@ -2,7 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "dsp/Engine.h"
-#include "dsp/Reverb.h"
+#include "dsp/MicrocosmDsp.h"
 
 namespace ParamIDs
 {
@@ -22,6 +22,7 @@ inline constexpr const char* hold         = "hold";
 inline constexpr const char* fxReverse    = "fxReverse";
 inline constexpr const char* output       = "output";
 inline constexpr const char* drift        = "drift";
+inline constexpr const char* reverbPos    = "reverbPosition";
 } // namespace ParamIDs
 
 namespace TimeMapping
@@ -100,6 +101,11 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     for (int i = 0; i < mc::Reverb::NumModes; ++i)
         modes.add (mc::Reverb::modeName (i));
     layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::reverbMode, 1 }, "Reverb Mode", modes, 2));
+
+    StringArray positions;
+    for (int i = 0; i < mc::MicrocosmDsp::NumReverbPositions; ++i)
+        positions.add (mc::MicrocosmDsp::reverbPositionName (i));
+    layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::reverbPos, 1 }, "Reverb Position", positions, 0));
 
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::hold, 1 }, "Hold", false));
     layout.add (std::make_unique<AudioParameterBool> (ParameterID { ParamIDs::fxReverse, 1 }, "FX Reverse", false));

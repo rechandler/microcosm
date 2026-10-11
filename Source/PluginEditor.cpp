@@ -107,6 +107,7 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
         addAndMakeVisible (label);
     };
     setupCombo (reverbMode, reverbLabel, ParamIDs::reverbMode, "REVERB", reverbAtt);
+    setupCombo (reverbPosition, reverbPosLabel, ParamIDs::reverbPos, "REVERB POSITION", reverbPosAtt);
 
     setupToggle (syncBtn, syncAtt, ParamIDs::sync, "SYNC");
 
@@ -280,7 +281,10 @@ void MicrocosmEditor::paint (Graphics& g)
     // reverb readout
     const int mode = (int) proc.apvts.getRawParameterValue (ParamIDs::reverbMode)->load();
     const int spacePct = roundToInt (proc.apvts.getRawParameterValue (ParamIDs::space)->load() * 100.0f);
-    g.drawText ("SPACE  " + String (spacePct) + "%  " + mc::Reverb::modeName (mode), inner.removeFromTop (18),
+    const int position = (int) proc.apvts.getRawParameterValue (ParamIDs::reverbPos)->load();
+    g.drawText ("SPACE  " + String (spacePct) + "%  " + mc::Reverb::modeName (mode) + "  -  "
+                    + String (mc::MicrocosmDsp::reverbPositionName (position)).toLowerCase(),
+                inner.removeFromTop (18),
                 Justification::centredLeft);
 
     // onset LED
@@ -330,9 +334,12 @@ void MicrocosmEditor::resized()
     auto row3 = l.removeFromTop (104);
     for (auto* k : { &resonance, &output })
         layoutKnob (*k, row3.removeFromLeft (kw).reduced (12, 2));
-    auto reverbBox = row3.reduced (10, 0).withSizeKeepingCentre (row3.getWidth() - 20, 48);
+    auto reverbBox = row3.reduced (10, 0).withSizeKeepingCentre (row3.getWidth() - 20, 98);
     reverbLabel.setBounds (reverbBox.removeFromTop (18));
     reverbMode.setBounds (reverbBox.removeFromTop (26));
+    reverbBox.removeFromTop (8);
+    reverbPosLabel.setBounds (reverbBox.removeFromTop (18));
+    reverbPosition.setBounds (reverbBox.removeFromTop (26));
 
     // ---- right: display ----
     displayArea = right.removeFromTop (122);
