@@ -80,6 +80,7 @@ public:
     void prepare (double sampleRate)
     {
         sr = (float) sampleRate;
+        levelTrimCoeff = 1.0f - std::exp (-1.0f / (0.05f * sr));
         onsetAtt = 1.0f - std::exp (-1.0f / (0.001f * sr));
         onsetRel = 1.0f - std::exp (-1.0f / (0.020f * sr));
         // Keep the 30 ms look-back inside the history at any sample rate.
@@ -124,6 +125,7 @@ public:
             pendingTunnelOnset = -1;
         }
         prm = p;
+        levelTrimTarget = std::pow (10.0f, levelTrimDb (prm.algo, prm.variation) / 20.0f);
         prm.unitSamples = std::min (std::max (p.unitSamples, 0.02 * sr), 2.5 * sr);
         history.setFrozen (p.hold);
 
@@ -211,8 +213,9 @@ public:
             const float target = std::min (1.0f, d * 1.5f);
             duckSmooth += (target > duckSmooth ? 0.05f : 0.002f) * (target - duckSmooth);
 
-            outL[i] = softClip (l);
-            outR[i] = softClip (r);
+            levelTrim += levelTrimCoeff * (levelTrimTarget - levelTrim);
+            outL[i] = softClip (l * levelTrim);
+            outR[i] = softClip (r * levelTrim);
             duck[i] = duckSmooth;
         }
     }
@@ -793,15 +796,47 @@ private:
         }
     }
 
+    // Per-effect output trim (dB) so every effect and variation sounds about
+    // as loud as the dry guitar (3 dB under, leaving headroom) while it is
+    // actually sounding.
+    // Calibrated on a real dry guitar take at Mix 100%: loudness measured over
+    // 400 ms windows within 15 dB of the loudest (so gaps don't count),
+    // averaged over three Activity/Repeats settings.
+    static float levelTrimDb (int algo, int variation)
+    {
+        static const float trims[NumAlgos][4] = {
+        {    -0.2f,    -0.1f,    -0.2f,     0.0f }, // Mosaic
+        {     4.0f,     2.8f,    8.6f,     3.3f }, // Seq
+        {    -1.8f,    -1.8f,    -1.8f,   -2.2f }, // Glide
+        {     2.3f,     2.3f,     2.3f,     2.1f }, // Haze
+        {     1.4f,     1.2f,    9.1f,     1.6f }, // Tunnel
+        {     3.6f,     0.7f,     3.9f,     4.2f }, // Strum
+        {     3.3f,     2.5f,     2.2f,     5.0f }, // Blocks
+        {     4.8f,     4.2f,   10.8f,     4.7f }, // Interrupt
+        {     4.9f,     4.8f,   15.9f,     4.8f }, // Arp
+        {   -2.9f,    -0.5f,    -0.9f,    -1.8f }, // Pattern
+        {   -2.1f,     1.4f,    -0.1f,    -0.6f }, // Warp
+        };
+        return trims[std::min (std::max (algo, 0), NumAlgos - 1)][std::min (std::max (variation, 0), 3)];
+    }
+
     static double stepsForActivity (float A)
     {
         static const double ks[] = { 1, 2, 3, 4, 6, 8 };
         return ks[std::min (5, (int) (A * 6.0f))];
     }
 
+    // Chains are counted in steps but also capped in seconds, so long TIME
+    // settings don't keep a chain going for half a minute after playing stops.
+    int stepsWithinLifetime (int steps, float R) const
+    {
+        const double step = prm.unitSamples / stepsForActivity (prm.activity);
+        return std::max (2, std::min (steps, (int) (maxLifeSeconds (R) / step)));
+    }
+
     void startChain (float R)
     {
-        chainRemaining = 2 + (int) std::round (R * 30.0f);
+        chainRemaining = stepsWithinLifetime (2 + (int) std::round (R * 30.0f), R);
         chainGain = 1.0f;
         chainDecay = std::pow (0.12f, 1.0f / (float) chainRemaining);
         chainIndex = 0;
@@ -809,7 +844,7 @@ private:
 
     void startArp (float R, int64_t source)
     {
-        arpRemaining = 3 + (int) std::round (R * 21.0f);
+        arpRemaining = stepsWithinLifetime (3 + (int) std::round (R * 21.0f), R);
         arpIndex = 0;
         arpSource = source;
         arpGain = 1.0f;
@@ -855,6 +890,7 @@ private:
     float arpGain = 1.0f, arpDecay = 0.9f;
     int64_t busyUntil = 0;
     float duckSmooth = 0.0f;
+    float levelTrim = 1.0f, levelTrimTarget = 1.0f, levelTrimCoeff = 0.001f;
     float samplesSinceOnset = 1.0e9f, delayGainSmooth = 1.0f;
 };
 } // namespace mc

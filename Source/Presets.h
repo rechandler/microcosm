@@ -38,7 +38,7 @@ inline const Preset list[] = {
     { "Octave Clouds",      E::Mosaic,    0, 0.60f, 0.70f, 0.65f, 6, hp (0.25f), 0.10f, 0.50f, 0.70f, R::Ambient,   0.25f, false },
     { "Rising Tide",        E::Glide,     2, 0.40f, 0.75f, 0.80f, 8, hp (0.20f), 0.10f, 0.55f, 0.75f, R::Cathedral, 0.20f, false },
     { "Ghost Echoes",       E::Pattern,   3, 0.40f, 0.65f, 0.30f, 8, lp (0.35f), 0.25f, 0.45f, 0.60f, R::DarkMedium, 0.40f, false },
-    { "Crystal Arp",        E::Arp,       1, 0.50f, 0.60f, 0.40f, 6, hp (0.30f), 0.15f, 0.50f, 0.65f, R::Shimmer,   0.10f, false },
+    { "Crystal Arp",        E::Arp,       1, 0.50f, 0.60f, 0.40f, 6, hp (0.30f), 0.15f, 0.45f, 0.60f, R::Shimmer,   0.10f, false },
     { "Distant Signal",     E::Blocks,    2, 0.50f, 0.50f, 0.70f, 8, lp (0.25f), 0.30f, 0.50f, 0.70f, R::Ambient,   0.50f, false },
     { "Infinite Pad",       E::Tunnel,    0, 0.60f, 1.00f, 1.00f, 9, open,      0.10f, 0.70f, 0.90f, R::Shimmer,   0.30f, false },
 };
