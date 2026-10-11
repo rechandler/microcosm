@@ -32,7 +32,7 @@ public:
         float resonance = 0.2f;  // 0..1
         float mix = 0.5f;        // 0 dry .. 1 wet
         float space = 0.25f;     // reverb amount
-        int reverbMode = Reverb::LargeHall;
+        int reverbMode = Reverb::Hall;
         int reverbPosition = ReverbAfter;
         float drift = 0.0f;      // tape wow/flutter on the effect signal
         float outputGain = 1.0f; // linear

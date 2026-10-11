@@ -57,7 +57,7 @@ Ripple, Arp and Drone react to note onsets in your playing. A detector picks up 
 | **Time** | The rhythmic unit. With **Sync** on it is a note value locked to Live's tempo and grid (1/32 … 1 bar). With Sync off it is a free time (50 ms – 2 s). |
 | **Filter** | Centre is open. Left is a low-pass, right is a high-pass. **Resonance** sets the peak. Applies to the effect only. |
 | **Mix** | Dry/wet. At the centre both are at full level, as on the pedal. |
-| **Space** | Reverb amount. **Reverb** mode: Bright Room, Dark Medium, Large Hall, Ambient, plus **Shimmer** (octave-up pitch shifting inside the reverb, so the tail keeps rising) and **Cathedral** (huge and long). |
+| **Space** | Reverb amount. **Reverb** mode: **Glass** (small, bright room), **Velvet** (medium, dark), **Hall**, **Haze** (long ambient wash), plus **Shimmer** (octave-up pitch shifting inside the reverb, so the tail keeps rising) and **Cathedral** (huge and long). |
 | **Reverb Position** | Where Space sits: **After effect** (guitar and effect share one space), **Before effect** (the effect works on the reverberated guitar, giving dense, smooth pads), or **Effect only** (your dry guitar stays dry and clear while the textures sit in the space). |
 | **Drift** | Tape-style wow, flutter and slow pitch wander on the effect, slightly different per side. Around 15–40% gives gentle movement; higher gives lo-fi warble. |
 | **Hold** | Freezes the audio the effect is working on, so it keeps generating from what you just played while you play over it. In the delays it becomes an infinite repeat. |

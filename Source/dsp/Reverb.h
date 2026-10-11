@@ -7,18 +7,18 @@
 namespace mc
 {
 // SPACE: an 8-line feedback delay network reverb with input diffusion,
-// per-line damping and gentle delay modulation. The first four rooms follow
-// the Microcosm's reverb options; Shimmer (an octave-up pitch shifter inside
-// the feedback loop, so the tail keeps rising) and Cathedral (huge, long and
-// lush) are additions for cinematic textures.
+// per-line damping and gentle delay modulation. Six modes: Glass (small and
+// bright), Velvet (medium and dark), Hall, Haze (a long ambient wash),
+// Shimmer (an octave-up pitch shifter inside the feedback loop, so the tail
+// keeps rising) and Cathedral (huge, long and lush).
 class Reverb
 {
 public:
-    enum Mode { BrightRoom = 0, DarkMedium, LargeHall, Ambient, Shimmer, Cathedral, NumModes };
+    enum Mode { Glass = 0, Velvet, Hall, Haze, Shimmer, Cathedral, NumModes };
 
     static const char* modeName (int m)
     {
-        static const char* names[NumModes] = { "Bright Room", "Dark Medium", "Large Hall", "Ambient", "Shimmer", "Cathedral" };
+        static const char* names[NumModes] = { "Glass", "Velvet", "Hall", "Haze", "Shimmer", "Cathedral" };
         return names[std::min (std::max (m, 0), NumModes - 1)];
     }
 
@@ -50,7 +50,7 @@ public:
         shimHpCoeff = 1.0f - std::exp (-kTwoPi * 250.0f / sr);
         shimHp = 0.0f;
         currentMode = -1;
-        setMode (LargeHall);
+        setMode (Hall);
     }
 
     void reset()
@@ -75,10 +75,10 @@ public:
 
         struct Settings { float size, rt60, damp, predelay, modDepth, diffusion, shimmer; };
         static const Settings settings[NumModes] = {
-            { 0.30f,  0.8f, 12000.0f, 0.004f, 0.0002f, 0.55f, 0.0f }, // Bright Room
-            { 0.65f,  2.2f,  2800.0f, 0.015f, 0.0006f, 0.65f, 0.0f }, // Dark Medium
-            { 1.00f,  4.5f,  6500.0f, 0.025f, 0.0008f, 0.70f, 0.0f }, // Large Hall
-            { 1.00f, 14.0f,  5000.0f, 0.040f, 0.0020f, 0.75f, 0.0f }, // Ambient
+            { 0.30f,  0.8f, 12000.0f, 0.004f, 0.0002f, 0.55f, 0.0f }, // Glass: small, bright room
+            { 0.65f,  2.2f,  2800.0f, 0.015f, 0.0006f, 0.65f, 0.0f }, // Velvet: medium, dark
+            { 1.00f,  4.5f,  6500.0f, 0.025f, 0.0008f, 0.70f, 0.0f }, // Hall: large hall
+            { 1.00f, 14.0f,  5000.0f, 0.040f, 0.0020f, 0.75f, 0.0f }, // Haze: long ambient wash
             { 1.20f, 10.0f,  7500.0f, 0.030f, 0.0015f, 0.72f, 1.0f }, // Shimmer
             { 1.70f,  9.0f,  8500.0f, 0.060f, 0.0018f, 0.78f, 0.0f }, // Cathedral
         };
