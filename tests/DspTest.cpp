@@ -480,6 +480,34 @@ int main()
         std::printf ("note detection at 192 kHz: %d of 8%s\n", detected, ok ? "" : "  <-- FAIL");
     }
 
+    // Mix 0% must pass the dry signal untouched by every effect (Interrupt's
+    // dry-ducking once still cut into it), with Space at 0.
+    for (int a = 0; a < Engine::NumAlgos; ++a)
+    {
+        MicrocosmDsp dsp;
+        dsp.prepare (kSr, kBlock);
+        MicrocosmDsp::Global g;
+        g.mix = 0.0f;
+        g.space = 0.0f;
+        dsp.setGlobal (g);
+        Engine::Params p;
+        p.algo = a;
+        p.activity = 1.0f;
+        p.unitSamples = 0.5 * kSr;
+        dsp.setEngineParams (p);
+        std::vector<float> l (inL.begin(), inL.begin() + (int) kSr * 4), r (inR.begin(), inR.begin() + (int) kSr * 4);
+        const auto st = run (dsp, l, r);
+        double eIn = 0;
+        for (int k = 0; k < (int) kSr * 4; ++k)
+            eIn += (double) inL[(size_t) k] * inL[(size_t) k];
+        const float diffDb = 20.0f * std::log10 (st.rms / (float) std::sqrt (eIn / (kSr * 4)));
+        if (std::abs (diffDb) > 0.1f)
+        {
+            ++failures;
+            std::printf ("mix 0%% %s: dry changed by %.2f dB  <-- FAIL\n", Engine::algoName (a), diffDb);
+        }
+    }
+
     // Looper: record 2 s, play back over silence.
     {
         MicrocosmDsp dsp;

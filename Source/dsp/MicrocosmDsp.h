@@ -154,8 +154,10 @@ private:
             }
 
             const float m = mixS.process (g.mix);
-            const float dryGain = std::min (1.0f, 2.0f * (1.0f - m)) * (1.0f - duckNow);
             const float wetGain = std::min (1.0f, 2.0f * m);
+            // INTERRUPT mutes the dry while its bursts play, but only as far as
+            // those bursts are audible: at Mix 0% the dry must be untouched.
+            const float dryGain = std::min (1.0f, 2.0f * (1.0f - m)) * (1.0f - duckNow * wetGain);
             float ol = dl[i] * dryGain + wl * wetGain;
             float orr = dr[i] * dryGain + wr * wetGain;
 
