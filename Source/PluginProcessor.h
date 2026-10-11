@@ -36,6 +36,11 @@ public:
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
 
+private:
+    // Declared before apvts: the Style parameter's text reads it.
+    std::atomic<int> algoForParamText { 0 };
+
+public:
     juce::AudioProcessorValueTreeState apvts;
 
     // State published by the audio thread for the UI.

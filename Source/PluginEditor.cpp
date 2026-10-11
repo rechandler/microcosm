@@ -142,7 +142,7 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     }
     for (int i = 0; i < 4; ++i)
     {
-        auto* b = variationButtons.add (new TextButton (String::charToString ((juce_wchar) ('A' + i))));
+        auto* b = variationButtons.add (new TextButton (mc::Engine::variationName (0, i)));
         b->onClick = [this, i] { setChoice (ParamIDs::variation, i); };
         b->getProperties().set ("warm", true);
         addAndMakeVisible (b);
@@ -151,6 +151,7 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     addAndMakeVisible (engineView);
 
     setSize (940, 580);
+    refreshSelectionButtons();
     startTimerHz (30);
 }
 
@@ -195,17 +196,28 @@ void MicrocosmEditor::setChoice (const char* paramId, int index)
     }
 }
 
-void MicrocosmEditor::timerCallback()
+// Effect/style button states and the style names for the current effect.
+void MicrocosmEditor::refreshSelectionButtons()
 {
-    if (presetBox.getSelectedId() != proc.getCurrentProgram() + 1)
-        presetBox.setSelectedId (proc.getCurrentProgram() + 1, dontSendNotification);
-
     const int algo = (int) proc.apvts.getRawParameterValue (ParamIDs::algo)->load();
     const int var = (int) proc.apvts.getRawParameterValue (ParamIDs::variation)->load();
     for (int i = 0; i < algoButtons.size(); ++i)
         algoButtons[i]->setToggleState (i == algo, dontSendNotification);
     for (int i = 0; i < variationButtons.size(); ++i)
+    {
         variationButtons[i]->setToggleState (i == var, dontSendNotification);
+        const String name (mc::Engine::variationName (algo, i));
+        if (variationButtons[i]->getButtonText() != name)
+            variationButtons[i]->setButtonText (name);
+    }
+}
+
+void MicrocosmEditor::timerCallback()
+{
+    if (presetBox.getSelectedId() != proc.getCurrentProgram() + 1)
+        presetBox.setSelectedId (proc.getCurrentProgram() + 1, dontSendNotification);
+
+    refreshSelectionButtons();
 
     if (proc.onsetFlash.exchange (false))
         onsetGlow = 1.0f;
@@ -247,7 +259,7 @@ void MicrocosmEditor::paint (Graphics& g)
     }
     {
         const auto* b = variationButtons[0];
-        g.drawText ("VARIATION", effectsArea.getX() + 12, b->getY(), 90, b->getHeight(), Justification::centredLeft);
+        g.drawText ("STYLE", effectsArea.getX() + 12, b->getY(), 90, b->getHeight(), Justification::centredLeft);
     }
 
     // display
@@ -261,10 +273,19 @@ void MicrocosmEditor::paint (Graphics& g)
     const int var = (int) proc.apvts.getRawParameterValue (ParamIDs::variation)->load();
     auto inner = displayArea.reduced (14, 10);
 
-    g.setColour (MicrocosmLookAndFeel::accent());
-    g.setFont (FontOptions (24.0f, Font::bold));
-    g.drawText (String (mc::Engine::algoName (algo)).toUpperCase() + "  " + String::charToString ((juce_wchar) ('A' + var)),
-                inner.removeFromTop (30), Justification::centredLeft);
+    {
+        auto titleRow = inner.removeFromTop (30);
+        const String effectName = String (mc::Engine::algoName (algo)).toUpperCase();
+        const FontOptions titleFont (24.0f, Font::bold);
+        g.setColour (MicrocosmLookAndFeel::accent());
+        g.setFont (titleFont);
+        g.drawText (effectName, titleRow, Justification::centredLeft);
+        const int w = GlyphArrangement::getStringWidthInt (Font (titleFont), effectName);
+        g.setColour (MicrocosmLookAndFeel::accent2());
+        g.setFont (FontOptions (20.0f, Font::bold));
+        g.drawText (String ("  ") + mc::Engine::variationName (algo, var), titleRow.withTrimmedLeft (w),
+                    Justification::centredLeft);
+    }
     g.setColour (MicrocosmLookAndFeel::dim());
     g.setFont (FontOptions (12.0f));
     g.drawText (String (mc::Engine::familyName (algo)).toUpperCase() + "  -  " + mc::Engine::variationDescription (algo, var),
@@ -341,6 +362,11 @@ void MicrocosmEditor::resized()
     reverbPosLabel.setBounds (reverbBox.removeFromTop (18));
     reverbPosition.setBounds (reverbBox.removeFromTop (26));
 
+    l.removeFromTop (16);
+    auto performRow = l.removeFromTop (40).reduced (6, 0);
+    holdBtn.setBounds (performRow.removeFromLeft (performRow.getWidth() / 2).reduced (4, 0));
+    reverseBtn.setBounds (performRow.reduced (4, 0));
+
     // ---- right: display ----
     displayArea = right.removeFromTop (122);
     right.removeFromTop (12);
@@ -363,11 +389,9 @@ void MicrocosmEditor::resized()
     e.removeFromTop (6);
     auto vline = e.removeFromTop (36);
     vline.removeFromLeft (labelW);
-    const int vw = vline.getWidth() / 6;
+    const int vw = vline.getWidth() / 4;
     for (auto* b : variationButtons)
         b->setBounds (vline.removeFromLeft (vw).reduced (3));
-    holdBtn.setBounds (vline.removeFromLeft (vw).reduced (3));
-    reverseBtn.setBounds (vline.reduced (3));
 
     right.removeFromTop (12);
     engineView.setBounds (right);

@@ -6,7 +6,7 @@ MicrocosmProcessor::MicrocosmProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput ("Input", juce::AudioChannelSet::stereo(), true)
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
-      apvts (*this, nullptr, "PARAMS", createParameterLayout())
+      apvts (*this, nullptr, "PARAMS", createParameterLayout (&algoForParamText))
 {
     auto p = [this] (const char* id) { return apvts.getRawParameterValue (id); };
     raw = { p (ParamIDs::algo), p (ParamIDs::variation), p (ParamIDs::activity), p (ParamIDs::repeats),
@@ -160,6 +160,7 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     // ---- parameters ----
     mc::Engine::Params ep;
     ep.algo = juce::jlimit (0, mc::Engine::NumAlgos - 1, (int) raw.algo->load());
+    algoForParamText.store (ep.algo);
     ep.variation = juce::jlimit (0, 3, (int) raw.variation->load());
     ep.activity = raw.activity->load();
     ep.repeats = raw.repeats->load();

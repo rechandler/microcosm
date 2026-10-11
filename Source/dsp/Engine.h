@@ -42,6 +42,25 @@ public:
         return "Multidelay";
     }
 
+    // Short display name for each algorithm's four variations ("styles").
+    static const char* variationName (int a, int v)
+    {
+        static const char* n[NumAlgos][4] = {
+            { "Octave Up", "Octave Down", "Mirror", "Chaos" },        // Mosaic
+            { "Filtered", "Sub", "Sweep", "Lo-Fi" },                  // Seq
+            { "Rise", "Fall", "Ascend", "Wander" },                   // Glide
+            { "Smear", "Sparkle", "Deep", "Rewind" },                 // Haze
+            { "Breathe", "Abyss", "Resonant", "Halo" },               // Tunnel
+            { "Repeat", "Phase", "Cascade", "Spiral" },               // Strum
+            { "Burst", "Pitched", "Soft", "Crushed" },                // Blocks
+            { "Cut", "Pitch", "Sweep", "Crush" },                     // Interrupt
+            { "Octaves", "Triads", "Steps", "Crushed" },              // Arp
+            { "Straight", "Syncopated", "Clusters", "Triplets" },     // Pattern
+            { "Envelope", "Resonant", "Shimmer", "Octave" },          // Warp
+        };
+        return n[std::min (std::max (a, 0), NumAlgos - 1)][std::min (std::max (v, 0), 3)];
+    }
+
     static const char* variationDescription (int a, int v)
     {
         static const char* d[NumAlgos][4] = {

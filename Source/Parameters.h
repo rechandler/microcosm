@@ -50,7 +50,9 @@ inline int divisionIndex (float knob) { return juce::jlimit (0, numDivisions - 1
 inline double freeMs (float knob) { return 50.0 * std::pow (40.0, (double) knob); }
 } // namespace TimeMapping
 
-inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout()
+// algoForText: the currently selected algorithm, so the Style parameter can
+// show its name (e.g. "Shimmer") in the host instead of A-D.
+inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout (const std::atomic<int>* algoForText)
 {
     using namespace juce;
     AudioProcessorValueTreeState::ParameterLayout layout;
@@ -62,8 +64,12 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         algoNames.add (mc::Engine::algoName (i));
 
     layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::algo, 1 }, "Effect", algoNames, 0));
-    layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::variation, 1 }, "Variation",
-                                                        StringArray { "A", "B", "C", "D" }, 0));
+    layout.add (std::make_unique<AudioParameterChoice> (
+        ParameterID { ParamIDs::variation, 1 }, "Style", StringArray { "1", "2", "3", "4" }, 0,
+        AudioParameterChoiceAttributes().withStringFromValueFunction ([algoForText] (int index, int)
+        {
+            return String (mc::Engine::variationName (algoForText != nullptr ? algoForText->load() : 0, index));
+        })));
 
     auto knob = [&] (const char* id, const char* name, float def)
     {

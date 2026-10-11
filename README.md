@@ -35,21 +35,21 @@ Sets saved with Macrocosm won't restore their settings into Tessera.
 
 ## The effect
 
-Eleven algorithms in four families. Each has four variations (A–D), for 44 presets in total.
+Eleven effects in four families. Each has four **styles**, for 44 sounds in total.
 
-| Family | Algorithm | What it does | A | B | C | D |
-|---|---|---|---|---|---|---|
-| Micro Loop | **Mosaic** | Overlapping micro-loops at different speeds | 1× + 2× (octave up) | 1× + ½× (octave down) | 1×/2×, some reversed | Chaotic speeds & directions |
-| | **Seq** | Recent audio sliced and re-sequenced | Filtered slices | 1× + ½× slices | Filter-swept slices | Lo-fi, reversed, pitched |
-| | **Glide** | Loops whose pitch glides | ½× → 1× | 2× → ½× | 1× → 2× | Random glides |
-| Granules | **Haze** | Smeared grain clouds | Plain cloud | + octave-up shimmer | + octave-down grains | Reversed, detuned |
-| | **Tunnel** | Drones from cyclical micro-loops | Breathing filter | Octave-down, swept | Resonant band-pass | + octave-up layer |
-| | **Strum** | Rhythmic chains of recent notes | Repeats last note | Phasing copies | Cascade of recent notes | Cascade + octave-up |
-| Glitch | **Blocks** | Rearranged, stuttered blocks | Bursts / ratchets | Pitched | Soft, filtered | Pitched + bit-crushed |
-| | **Interrupt** | Bursts that *replace* the dry signal | Rearranged | Pitched | Filter sweeps | Crushed |
-| | **Arp** | Each note becomes an arpeggio | Octaves | 3rds, 5ths, octaves | Stepped band-pass | Crushed |
-| Multidelay | **Pattern** | Rhythmic multi-tap delay | Straight | Syncopated | Clusters | Triplets |
-| | **Warp** | Multi-tap delay with processed taps | Envelope filters | Resonant band-passes | Pitch-shifted taps | Octave-up grain taps |
+| Family | Effect | What it does | Styles |
+|---|---|---|---|
+| Micro Loop | **Mosaic** | Overlapping micro-loops at different speeds | Octave Up, Octave Down, Mirror (some reversed), Chaos |
+| | **Seq** | Recent audio sliced and re-sequenced | Filtered, Sub (half speed), Sweep (filter sweeps), Lo-Fi |
+| | **Glide** | Loops whose pitch glides | Rise (½× → 1×), Fall (2× → ½×), Ascend (1× → 2×), Wander |
+| Granules | **Haze** | Smeared grain clouds | Smear, Sparkle (+octave), Deep (−octave), Rewind (reversed) |
+| | **Tunnel** | Drones from cyclical micro-loops | Breathe, Abyss (octave down), Resonant, Halo (+octave) |
+| | **Strum** | Rhythmic chains of recent notes | Repeat, Phase, Cascade, Spiral (cascade + octave) |
+| Glitch | **Blocks** | Rearranged, stuttered blocks | Burst, Pitched, Soft, Crushed |
+| | **Interrupt** | Bursts that *replace* the dry signal | Cut, Pitch, Sweep, Crush |
+| | **Arp** | Each note becomes an arpeggio | Octaves, Triads, Steps (filter), Crushed |
+| Multidelay | **Pattern** | Rhythmic multi-tap delay | Straight, Syncopated, Clusters, Triplets |
+| | **Warp** | Multi-tap delay with processed taps | Envelope, Resonant, Shimmer (pitched), Octave |
 
 Strum, Arp and Tunnel react to note onsets in your playing. A detector picks up each new attack.
 
@@ -122,7 +122,7 @@ The build is universal (`arm64;x86_64`) by default.
 cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build
 ```
 
-Run the headless DSP test with `ctest --test-dir build -C Release`. It renders all 44 presets, extreme settings,
+Run the headless DSP test with `ctest --test-dir build -C Release`. It renders all 44 sounds, extreme settings,
 Hold, the visualizer data and note detection, and checks for silence, NaNs, aliasing and runaway levels.
 
 CI (`.github/workflows/build.yml`) builds every platform and runs the DSP test and

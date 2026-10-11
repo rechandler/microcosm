@@ -4,7 +4,7 @@ Tessera is a granular, micro-loop, glitch and multidelay effect, inspired by the
 
 ## What's new since v1.0.0
 
-- **Renamed to Tessera.**
+- **Renamed to Tessera**, and each effect's four variations now have names (styles) instead of A–D.
 - **Engine View:** live display of your playing, the effect output, every loop and grain and the delay taps. It replaces the looper, which has been removed.
 - **Reverb Position:** after the effect, before it, or on the effect only. Two new presets show it off: Cloud Choir and Clean Halo.
 - **Level matching:** every effect and variation now sits at a consistent level, calibrated on real guitar.
@@ -32,7 +32,7 @@ Tessera is a granular, micro-loop, glitch and multidelay effect, inspired by the
 
 ## What's in it
 
-- **11 effects × 4 variations:**
+- **11 effects × 4 named styles:**
   - Micro Loop: Mosaic, Seq, Glide
   - Granules: Haze, Tunnel, Strum
   - Glitch: Blocks, Interrupt, Arp
