@@ -4,7 +4,7 @@ A free, open-source granular / micro-loop / glitch / multidelay effect plugin fo
 It builds as **VST3 on Windows** and **VST3 + AU (Universal: Apple Silicon + Intel) on macOS**,
 plus a standalone app. Both load in Ableton Live.
 
-Website: **https://rechandler.github.io/microcosm/**
+Website: **https://rechandler.github.io/tessera/**
 
 ![Tessera UI](docs/screenshot.png)
 
