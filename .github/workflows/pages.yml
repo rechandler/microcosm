@@ -3,7 +3,7 @@ name: Website
 # Publishes site/ (plus the screenshots in docs/) to GitHub Pages.
 on:
   push:
-    branches: ["claude/youthful-goodall-mqphgc"]
+    branches: ["main"]
     paths: ["site/**", "docs/*.png", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
