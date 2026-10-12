@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tessera: granular, loop and echo effect plugin</title>
+<meta name="description" content="Tessera is a free granular, micro-loop, glitch and multi-delay effect plugin for cinematic guitar textures. VST3 for Windows, VST3 and AU for macOS.">
+<meta property="og:title" content="Tessera">
+<meta property="og:description" content="A free granular, micro-loop, glitch and echo plugin for cinematic guitar textures.">
+<meta property="og:image" content="screenshot.png">
+<style>
+  :root {
+    --bg: #15171c;
+    --panel: #1c1f26;
+    --face: #272b35;
+    --line: #2f3440;
+    --text: #e8e6df;
+    --dim: #8a8f9c;
+    --accent: #6fe3c8;
+    --accent2: #ff8a5c;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); }
+  img { max-width: 100%; height: auto; display: block; }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+
+  nav {
+    position: sticky; top: 0; z-index: 10;
+    background: rgba(21, 23, 28, 0.88);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav .wrap { display: flex; align-items: center; gap: 24px; height: 56px; }
+  nav .logo { font-weight: 800; letter-spacing: 0.08em; color: var(--text); text-decoration: none; margin-right: auto; }
+  nav a.link { color: var(--dim); text-decoration: none; font-size: 14px; }
+  nav a.link:hover { color: var(--text); }
+  @media (max-width: 640px) { nav a.link { display: none; } }
+
+  header.hero { padding: 72px 0 40px; text-align: center; }
+  .hero h1 { font-size: clamp(44px, 8vw, 76px); letter-spacing: 0.06em; margin: 0; line-height: 1; }
+  .hero .tag { font-size: clamp(18px, 2.4vw, 22px); color: var(--dim); max-width: 640px; margin: 18px auto 32px; }
+  .hero .tag b { color: var(--text); font-weight: 600; }
+  .buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 13px 22px; border-radius: 10px; font-weight: 700; text-decoration: none;
+    border: 1px solid var(--accent); color: var(--accent); background: transparent;
+  }
+  .btn.primary { background: var(--accent); color: #10231e; }
+  .btn small { font-weight: 500; opacity: 0.75; }
+  .btn:hover { filter: brightness(1.08); }
+  .meta { color: var(--dim); font-size: 14px; margin-top: 14px; }
+
+  .shot {
+    margin: 48px auto 0; max-width: 940px; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--line); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55);
+  }
+
+  section { padding: 64px 0; border-top: 1px solid var(--line); }
+  h2 { font-size: 30px; margin: 0 0 10px; }
+  .lead { color: var(--dim); max-width: 720px; margin: 0 0 32px; }
+  .eyebrow { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 8px; }
+
+  .grid { display: grid; gap: 16px; }
+  .grid.four { grid-template-columns: repeat(4, 1fr); }
+  .grid.three { grid-template-columns: repeat(3, 1fr); }
+  .grid.two { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 900px) { .grid.four, .grid.three { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 600px) { .grid.four, .grid.three, .grid.two { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 20px; }
+  .card h3 { margin: 0 0 12px; font-size: 13px; letter-spacing: 0.14em; color: var(--accent); }
+  .fx { margin: 0 0 14px; }
+  .fx:last-child { margin-bottom: 0; }
+  .fx b { display: block; font-size: 17px; }
+  .fx span { color: var(--dim); font-size: 14px; display: block; }
+  .fx i { color: var(--accent2); font-style: normal; font-size: 12.5px; }
+
+  .reverb b { font-size: 17px; }
+  .reverb .knob { color: var(--accent2); font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+  .reverb p { margin: 6px 0 0; color: var(--dim); font-size: 14px; }
+
+  .feature h3 { color: var(--text); letter-spacing: 0; font-size: 17px; margin-bottom: 6px; }
+  .feature p { margin: 0; color: var(--dim); font-size: 14.5px; }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: center; }
+  @media (max-width: 860px) { .split { grid-template-columns: 1fr; } }
+  .split img { border-radius: 12px; border: 1px solid var(--line); }
+
+  ol.steps { margin: 0; padding-left: 20px; color: var(--dim); }
+  ol.steps li { margin-bottom: 8px; }
+  ol.steps b { color: var(--text); }
+  code {
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--face); color: var(--text); padding: 2px 6px; border-radius: 5px;
+    overflow-wrap: anywhere;
+  }
+  .note { margin-top: 14px; font-size: 13.5px; color: var(--dim); border-left: 2px solid var(--accent2); padding-left: 12px; }
+
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; }
+  .presets span { background: var(--face); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; font-size: 14px; }
+
+  footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--dim); font-size: 14px; }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="logo" href="#">TESSERA</a>
+    <a class="link" href="#effects">Effects</a>
+    <a class="link" href="#reverb">Reverb</a>
+    <a class="link" href="#features">Features</a>
+    <a class="link" href="#install">Install</a>
+    <a class="link" href="https://github.com/rechandler/microcosm">GitHub</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <h1>TESSERA</h1>
+    <p class="tag">A <b>granular, micro-loop, glitch and echo</b> effect plugin, built for <b>cinematic guitar textures</b>.</p>
+    <div class="buttons">
+      <a class="btn primary" href="https://github.com/rechandler/microcosm/releases/latest/download/Tessera-Windows-x64.zip">Download for Windows <small>VST3</small></a>
+      <a class="btn primary" href="https://github.com/rechandler/microcosm/releases/latest/download/Tessera-macOS-Universal.zip">Download for macOS <small>VST3 + AU</small></a>
+    </div>
+    <p class="meta">Free · Works in Ableton Live and other VST3/AU hosts · Apple Silicon and Intel · <a href="https://github.com/rechandler/microcosm/releases/latest">Release notes</a></p>
+    <div class="shot"><img src="screenshot.png" width="940" height="580" alt="The Tessera plugin window: knobs on the left, effect buttons and the Engine View on the right"></div>
+  </div>
+</header>
+
+<section id="effects">
+  <div class="wrap">
+    <div class="eyebrow">44 sounds</div>
+    <h2>Eleven effects, four styles each</h2>
+    <p class="lead">Tessera keeps listening to what you play and turns it into loops, grain clouds, glitches and echoes. Pick an effect, then a style, and shape it with Activity, Repeats and Shape.</p>
+    <div class="grid four">
+      <div class="card">
+        <h3>LOOPS</h3>
+        <div class="fx"><b>Facets</b><span>Overlapping micro-loops at different speeds</span><i>Octave Up · Octave Down · Mirror · Chaos</i></div>
+        <div class="fx"><b>Shuffle</b><span>Your playing sliced and re-sequenced</span><i>Filtered · Sub · Sweep · Lo-Fi</i></div>
+        <div class="fx"><b>Bend</b><span>Loops whose pitch glides</span><i>Rise · Fall · Ascend · Wander</i></div>
+      </div>
+      <div class="card">
+        <h3>GRAINS</h3>
+        <div class="fx"><b>Mist</b><span>Smeared clouds of tiny grains</span><i>Smear · Sparkle · Deep · Rewind</i></div>
+        <div class="fx"><b>Drone</b><span>Sustained drones from repeating loops</span><i>Breathe · Abyss · Resonant · Halo</i></div>
+        <div class="fx"><b>Ripple</b><span>Rhythmic chains of the notes you just played</span><i>Repeat · Phase · Cascade · Spiral</i></div>
+      </div>
+      <div class="card">
+        <h3>GLITCHES</h3>
+        <div class="fx"><b>Chop</b><span>Stuttered, rearranged blocks</span><i>Burst · Pitched · Soft · Crushed</i></div>
+        <div class="fx"><b>Cutout</b><span>Bursts that replace the dry guitar</span><i>Cut · Pitch · Sweep · Crush</i></div>
+        <div class="fx"><b>Arp</b><span>Every note becomes an arpeggio</span><i>Octaves · Triads · Steps · Crushed</i></div>
+      </div>
+      <div class="card">
+        <h3>ECHOES</h3>
+        <div class="fx"><b>Rhythm</b><span>Rhythmic multi-tap delay</span><i>Straight · Syncopated · Clusters · Triplets</i></div>
+        <div class="fx"><b>Prism</b><span>Echoes that are filtered, resonant or pitched</span><i>Envelope · Resonant · Shimmer · Octave</i></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reverb">
+  <div class="wrap">
+    <div class="eyebrow">Space</div>
+    <h2>Six reverbs, each with its own Character knob</h2>
+    <p class="lead">Put the reverb after the effect, before it (so the effect chops up the reverb wash) or on the effect only (your dry guitar stays dry). The Character knob does something different for each reverb. At the centre you get the standard sound.</p>
+    <div class="grid three">
+      <div class="card reverb"><b>Glass</b> <span class="knob">· AIR</span><p>A small, bright room. Turn Air from dull wood to sparkling glass.</p></div>
+      <div class="card reverb"><b>Velvet</b> <span class="knob">· WARMTH</span><p>A medium, dark room. Warmth goes from murky to smooth.</p></div>
+      <div class="card reverb"><b>Hall</b> <span class="knob">· DECAY</span><p>A large hall, with a tail from 2 to 10 seconds.</p></div>
+      <div class="card reverb"><b>Haze</b> <span class="knob">· MOVEMENT</span><p>A long ambient wash. Movement adds wobble, from still to seasick.</p></div>
+      <div class="card reverb"><b>Shimmer</b> <span class="knob">· SPARKLE</span><p>Octave-up pitch shifting inside the tail, from a faint halo to an endlessly rising choir.</p></div>
+      <div class="card reverb"><b>Cathedral</b> <span class="knob">· BLOOM</span><p>Huge and long. Bloom makes each note swell slowly into the space.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <div class="eyebrow">Made for playing</div>
+    <h2>Built to sit in your session</h2>
+    <p class="lead">Small touches that make Tessera easy to play live and to record with.</p>
+    <div class="grid three">
+      <div class="card feature"><h3>Follows Live's transport</h3><p>Press play and the effect starts fresh, locked to the grid. Press stop and it fades out and forgets. Turn Transport off to keep it running.</p></div>
+      <div class="card feature"><h3>Tempo sync</h3><p>Time locks to Live's tempo as a note value, from 1/32 to a full bar. With Sync off it runs free, from 50 ms to 2 s.</p></div>
+      <div class="card feature"><h3>Hold</h3><p>Freezes what the effect is working on, so it keeps generating from what you just played while you play over it.</p></div>
+      <div class="card feature"><h3>Reverse</h3><p>Plays every loop, grain and echo backwards.</p></div>
+      <div class="card feature"><h3>Drift</h3><p>Tape-style wow and flutter on the effect, from gentle movement to lo-fi warble.</p></div>
+      <div class="card feature"><h3>Clean pitch shifting</h3><p>Octave-up loops and grains read from band-limited audio, and pitched echoes line up with your waveform. Sustained notes stay clean.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap split">
+    <div>
+      <div class="eyebrow">See what it's doing</div>
+      <h2>Engine View and built-in help</h2>
+      <p class="lead" style="margin-bottom:16px">A live display of your playing, with the effect's output on top. Every loop and grain shows as a dot at the moment of your playing it's reading from. Colour and height show its pitch, size shows its level, and rings mean it's playing in reverse. The echoes show as markers at their delay times.</p>
+      <p class="lead" style="margin:0">Stuck? Click <b style="color:var(--text)">?</b> next to the title for a one-page quick reference to every control.</p>
+    </div>
+    <img src="help.png" width="940" height="580" alt="Tessera's built-in quick reference page">
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Start here</div>
+    <h2>14 cinematic presets</h2>
+    <p class="lead">Starting points for guitar, from the Preset menu at the top of the plugin or Live's program list.</p>
+    <div class="presets">
+      <span>Shimmer Cathedral</span><span>Frozen Swell</span><span>Reverse Bloom</span><span>Granular Choir</span>
+      <span>Tape Memory</span><span>Octave Clouds</span><span>Rising Tide</span><span>Ghost Echoes</span>
+      <span>Crystal Arp</span><span>Distant Signal</span><span>Infinite Pad</span><span>Cloud Choir</span>
+      <span>Clean Halo</span><span>Init</span>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="eyebrow">Install</div>
+    <h2>Get it into Ableton Live</h2>
+    <div class="grid two" style="margin-top:24px">
+      <div class="card">
+        <h3>WINDOWS</h3>
+        <ol class="steps">
+          <li>Download <a href="https://github.com/rechandler/microcosm/releases/latest/download/Tessera-Windows-x64.zip">Tessera-Windows-x64.zip</a> and unzip it.</li>
+          <li>Copy <b>Tessera.vst3</b> into <code>C:\Program Files\Common Files\VST3\</code></li>
+          <li>In Live, open <b>Options → Preferences → Plug-Ins</b>, turn on <b>Use VST3 Plug-In System Folders</b>, then click <b>Rescan</b>.</li>
+          <li>Find it under <b>Plug-Ins → Tessera Audio → Tessera</b>.</li>
+        </ol>
+        <p class="note">The plugin isn't code-signed, so Windows Security may flag it as unknown the first time. In <b>Windows Security → Protection history</b>, choose <b>Allow on device</b>.</p>
+      </div>
+      <div class="card">
+        <h3>MACOS</h3>
+        <ol class="steps">
+          <li>Download <a href="https://github.com/rechandler/microcosm/releases/latest/download/Tessera-macOS-Universal.zip">Tessera-macOS-Universal.zip</a> and unzip it.</li>
+          <li>Copy <b>Tessera.vst3</b> to <code>~/Library/Audio/Plug-Ins/VST3/</code> and/or <b>Tessera.component</b> to <code>~/Library/Audio/Plug-Ins/Components/</code></li>
+          <li>In Live, enable VST3 and/or Audio Units under <b>Preferences → Plug-Ins</b> and rescan.</li>
+        </ol>
+        <p class="note">The build isn't notarized. If macOS blocks it, run this in Terminal:<br><code>xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins/VST3/Tessera.vst3 ~/Library/Audio/Plug-Ins/Components/Tessera.component</code></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>Tessera by Tessera Audio</span>
+    <span><a href="https://github.com/rechandler/microcosm">Source code</a> · <a href="https://github.com/rechandler/microcosm/releases">All releases</a></span>
+  </div>
+</footer>
+
+</body>
+</html>
