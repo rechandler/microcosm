@@ -93,6 +93,14 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     setupKnob (output, ParamIDs::output, "OUTPUT", true);
     setupKnob (character, ParamIDs::reverbChar, "CHARACTER", true);
     character.slider.setTooltip ("Shapes the selected reverb: Air, Warmth, Decay, Movement, Sparkle or Bloom");
+    // Under the knob just the value, like the other knobs (the host still
+    // shows e.g. "Sparkle 70%").
+    character.slider.textFromValueFunction = [this] (double v)
+    {
+        if (characterMode == mc::Reverb::Hall)
+            return String (mc::Reverb::hallDecaySeconds ((float) v), 1) + " s";
+        return String (roundToInt (v * 100.0)) + "%";
+    };
     refreshCharacterLabel();
     filter.slider.getProperties().set ("bipolar", true);
 
@@ -110,7 +118,8 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
         addAndMakeVisible (label);
     };
     setupCombo (reverbMode, reverbLabel, ParamIDs::reverbMode, "REVERB", reverbAtt);
-    setupCombo (reverbPosition, reverbPosLabel, ParamIDs::reverbPos, "REVERB POSITION", reverbPosAtt);
+    setupCombo (reverbPosition, reverbPosLabel, ParamIDs::reverbPos, "POSITION", reverbPosAtt);
+    reverbLabel.setColour (Label::textColourId, MicrocosmLookAndFeel::text());
 
     setupToggle (syncBtn, syncAtt, ParamIDs::sync, "SYNC");
     setupToggle (transportBtn, transportAtt, ParamIDs::transport, "TRANSPORT");
@@ -267,6 +276,12 @@ void MicrocosmEditor::paint (Graphics& g)
     drawPanel (leftArea);
     drawPanel (effectsArea);
 
+    // The reverb section: type, position and its Character knob together.
+    g.setColour (Colours::black.withAlpha (0.18f));
+    g.fillRoundedRectangle (reverbArea.toFloat(), 8.0f);
+    g.setColour (MicrocosmLookAndFeel::accent().withAlpha (0.35f));
+    g.drawRoundedRectangle (reverbArea.toFloat().reduced (0.5f), 8.0f, 1.0f);
+
     // family labels
     g.setFont (FontOptions (11.0f, Font::bold));
     g.setColour (MicrocosmLookAndFeel::dim());
@@ -373,17 +388,21 @@ void MicrocosmEditor::resized()
         layoutKnob (*k, row2.removeFromLeft (kw).reduced (4, 2));
     l.removeFromTop (12);
 
-    auto row3 = l.removeFromTop (104);
-    for (auto* k : { &resonance, &output, &character })
-        layoutKnob (*k, row3.removeFromLeft (82).reduced (2, 2));
-    auto reverbBox = row3.reduced (10, 0).withSizeKeepingCentre (row3.getWidth() - 20, 98);
+    auto row3 = l.removeFromTop (110);
+    for (auto* k : { &resonance, &output })
+        layoutKnob (*k, row3.removeFromLeft (80).reduced (2, 6));
+    row3.removeFromLeft (6);
+    reverbArea = row3.withTrimmedRight (10);
+    auto reverbBox = reverbArea.reduced (10, 6);
+    layoutKnob (character, reverbBox.removeFromRight (86));
+    reverbBox.removeFromRight (6);
     reverbLabel.setBounds (reverbBox.removeFromTop (18));
     reverbMode.setBounds (reverbBox.removeFromTop (26));
-    reverbBox.removeFromTop (8);
+    reverbBox.removeFromTop (4);
     reverbPosLabel.setBounds (reverbBox.removeFromTop (18));
     reverbPosition.setBounds (reverbBox.removeFromTop (26));
 
-    l.removeFromTop (16);
+    l.removeFromTop (10);
     auto performRow = l.removeFromTop (40).reduced (6, 0);
     holdBtn.setBounds (performRow.removeFromLeft (performRow.getWidth() / 2).reduced (4, 0));
     reverseBtn.setBounds (performRow.reduced (4, 0));

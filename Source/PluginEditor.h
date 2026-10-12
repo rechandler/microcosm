@@ -85,7 +85,7 @@ private:
 
     juce::OwnedArray<juce::TextButton> algoButtons, variationButtons;
 
-    juce::Rectangle<int> displayArea, effectsArea, leftArea;
+    juce::Rectangle<int> displayArea, effectsArea, leftArea, reverbArea;
     EngineView engineView { proc };
     float onsetGlow = 0.0f;
 
