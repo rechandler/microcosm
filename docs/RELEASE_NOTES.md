@@ -1,4 +1,4 @@
-Tessera is a granular, micro-loop, glitch and multidelay effect, inspired by the Hologram Microcosm and tuned for cinematic guitar textures.
+Tessera is a granular, micro-loop, glitch and multidelay effect, tuned for cinematic guitar textures.
 
 ## Downloads
 
@@ -32,5 +32,3 @@ Tessera is a granular, micro-loop, glitch and multidelay effect, inspired by the
   - Band-limited playback means pitched-up loops and grains don't alias.
   - A waveform-aligned pitch shifter keeps sustained notes clean in Prism and Shimmer.
 - **Reliable note detection** at any guitar level, which drives Ripple, Arp and Drone.
-
-Not affiliated with or endorsed by Hologram Electronics. "Microcosm" is their trademark.

@@ -15,7 +15,7 @@ namespace mc
 // SPACE (the reverb) can sit after the mix (default), before the effect (the
 // engine then works on the reverberated signal), or on the effect only (the
 // dry guitar stays dry).
-class MicrocosmDsp
+class TesseraDsp
 {
 public:
     enum ReverbPosition { ReverbAfter = 0, ReverbBefore, ReverbEffectOnly, NumReverbPositions };

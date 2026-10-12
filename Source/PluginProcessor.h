@@ -2,15 +2,15 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "Parameters.h"
-#include "dsp/MicrocosmDsp.h"
+#include "dsp/TesseraDsp.h"
 #include <array>
 #include <atomic>
 
-class MicrocosmProcessor : public juce::AudioProcessor
+class TesseraProcessor : public juce::AudioProcessor
 {
 public:
-    MicrocosmProcessor();
-    ~MicrocosmProcessor() override = default;
+    TesseraProcessor();
+    ~TesseraProcessor() override = default;
 
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override {}
@@ -71,7 +71,7 @@ private:
     void updateViz (const float* inL, const float* inR, bool before, int numSamples);
     void publishVoicesAndTaps();
 
-    mc::MicrocosmDsp dsp;
+    mc::TesseraDsp dsp;
     juce::AudioBuffer<float> monoScratch;
 
     std::array<std::atomic<float>, kVizColumns> vizIn {}, vizOut {};
@@ -99,5 +99,5 @@ private:
         std::atomic<float>* reverbChar;
     } raw {};
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MicrocosmProcessor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TesseraProcessor)
 };

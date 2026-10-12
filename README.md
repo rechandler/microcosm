@@ -1,14 +1,10 @@
 # Tessera
 
-A free, open-source granular / micro-loop / glitch / multidelay effect plugin, closely modelled on
-the **Hologram Electronics Microcosm** pedal. It builds as **VST3 on Windows** and **VST3 + AU (Universal: Apple Silicon + Intel) on macOS**,
+A free, open-source granular / micro-loop / glitch / multidelay effect plugin for cinematic guitar textures.
+It builds as **VST3 on Windows** and **VST3 + AU (Universal: Apple Silicon + Intel) on macOS**,
 plus a standalone app. Both load in Ableton Live.
 
 ![Tessera UI](docs/screenshot.png)
-
-> Not affiliated with or endorsed by Hologram Electronics. "Microcosm" is their trademark. This project is an
-> independent re-creation of the effect's concept, so it ships under a different name. It also deliberately goes further
-> than the pedal in places, with Shimmer and Cathedral reverbs, Drift and factory presets, for cinematic textures.
 
 ## Install in Ableton Live
 
@@ -49,6 +45,8 @@ Ripple, Arp and Drone react to note onsets in your playing. A detector picks up 
 
 ### Controls
 
+Click **?** next to the Tessera title for a one-page quick reference inside the plugin.
+
 | Control | Function |
 |---|---|
 | **Activity** | Density: how many loops, grains, slices or taps are active. Also how busy the glitches are. |
@@ -56,7 +54,7 @@ Ripple, Arp and Drone react to note onsets in your playing. A detector picks up 
 | **Shape** | Volume contour of each event: percussive (left), flat (centre), swelling (right). In Rhythm/Prism it contours how each note feeds the echoes (plucky ↔ swelling) and tilts the tap levels. |
 | **Time** | The rhythmic unit. With **Sync** on it is a note value locked to Live's tempo and grid (1/32 … 1 bar). With Sync off it is a free time (50 ms – 2 s). |
 | **Filter** | Centre is open. Left is a low-pass, right is a high-pass. **Resonance** sets the peak. Applies to the effect only. |
-| **Mix** | Dry/wet. At the centre both are at full level, as on the pedal. |
+| **Mix** | Dry/wet. At the centre both are at full level. |
 | **Space** | Reverb amount. **Reverb** mode: **Glass** (small, bright room), **Velvet** (medium, dark), **Hall**, **Haze** (long ambient wash), plus **Shimmer** (octave-up pitch shifting inside the reverb, so the tail keeps rising) and **Cathedral** (huge and long). |
 | **Character** | Shapes the selected reverb; its label changes with the reverb. Centre is the reverb's standard sound. **Glass – Air:** dull wood ↔ sparkling glass. **Velvet – Warmth:** murky ↔ smooth. **Hall – Decay:** 2 s ↔ 10 s. **Haze – Movement:** still ↔ chorused, seasick. **Shimmer – Sparkle:** faint halo ↔ bright, endlessly rising choir. **Cathedral – Bloom:** instant ↔ distant, each note swelling slowly into the space. |
 | **Reverb Position** | Where Space sits: **After effect** (guitar and effect share one space), **Before effect** (the effect works on the reverberated guitar, giving dense, smooth pads), or **Effect only** (your dry guitar stays dry and clear while the textures sit in the space). |
@@ -138,7 +136,7 @@ Source/
     Reverb.h        8-line FDN reverb, 6 modes incl. Shimmer
     PitchShifter.h  WSOLA-aligned grain pitch shifter (Prism, Shimmer)
     Drift.h         tape wow/flutter on the effect signal
-    MicrocosmDsp.h  full signal chain
+    TesseraDsp.h    full signal chain
   Parameters.h    parameter IDs and layout
   Presets.h       factory presets
   PluginProcessor.*, PluginEditor.*  JUCE wrapper and UI

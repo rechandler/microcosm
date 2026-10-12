@@ -2,7 +2,7 @@
 #include "PluginEditor.h"
 #include "Presets.h"
 
-MicrocosmProcessor::MicrocosmProcessor()
+TesseraProcessor::TesseraProcessor()
     : AudioProcessor (BusesProperties()
                           .withInput ("Input", juce::AudioChannelSet::stereo(), true)
                           .withOutput ("Output", juce::AudioChannelSet::stereo(), true)),
@@ -17,7 +17,7 @@ MicrocosmProcessor::MicrocosmProcessor()
             p (ParamIDs::reverbChar) };
 }
 
-bool MicrocosmProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
+bool TesseraProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
 {
     const auto out = layouts.getMainOutputChannelSet();
     const auto in = layouts.getMainInputChannelSet();
@@ -28,7 +28,7 @@ bool MicrocosmProcessor::isBusesLayoutSupported (const BusesLayout& layouts) con
     return in.size() <= out.size();
 }
 
-void MicrocosmProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
+void TesseraProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     dsp.prepare (sampleRate, juce::jmax (32, samplesPerBlock));
     monoScratch.setSize (1, juce::jmax (32, samplesPerBlock));
@@ -39,7 +39,7 @@ void MicrocosmProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 
 // Accumulates per-column peaks for the input (before processing) or the
 // output (after). Both advance in lockstep, so the columns line up.
-void MicrocosmProcessor::updateViz (const float* inL, const float* inR, bool before, int numSamples)
+void TesseraProcessor::updateViz (const float* inL, const float* inR, bool before, int numSamples)
 {
     int& count = before ? vizInCount : vizOutCount;
     int& pos = before ? vizInPos : vizOutPos;
@@ -61,7 +61,7 @@ void MicrocosmProcessor::updateViz (const float* inL, const float* inR, bool bef
         vizWritePos.store (pos, std::memory_order_release);
 }
 
-void MicrocosmProcessor::publishVoicesAndTaps()
+void TesseraProcessor::publishVoicesAndTaps()
 {
     mc::Engine::VizVoice voices[kVizMaxVoices];
     const int nv = dsp.getEngine().snapshotVoices (voices, kVizMaxVoices);
@@ -87,7 +87,7 @@ void MicrocosmProcessor::publishVoicesAndTaps()
     vizTapCount.store (nt, std::memory_order_release);
 }
 
-void MicrocosmProcessor::copyWaveforms (float* in, float* out) const
+void TesseraProcessor::copyWaveforms (float* in, float* out) const
 {
     const int start = vizWritePos.load (std::memory_order_acquire);
     for (int i = 0; i < kVizColumns; ++i)
@@ -98,7 +98,7 @@ void MicrocosmProcessor::copyWaveforms (float* in, float* out) const
     }
 }
 
-int MicrocosmProcessor::copyVoices (VizVoice* out) const
+int TesseraProcessor::copyVoices (VizVoice* out) const
 {
     const int n = juce::jlimit (0, kVizMaxVoices, vizVoiceCount.load (std::memory_order_acquire));
     for (int i = 0; i < n; ++i)
@@ -108,7 +108,7 @@ int MicrocosmProcessor::copyVoices (VizVoice* out) const
     return n;
 }
 
-int MicrocosmProcessor::copyTaps (VizTap* out) const
+int TesseraProcessor::copyTaps (VizTap* out) const
 {
     const int n = juce::jlimit (0, kVizMaxTaps, vizTapCount.load (std::memory_order_acquire));
     for (int i = 0; i < n; ++i)
@@ -117,7 +117,7 @@ int MicrocosmProcessor::copyTaps (VizTap* out) const
     return n;
 }
 
-void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
+void TesseraProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
 {
     juce::ScopedNoDenormals noDenormals;
     const int numSamples = buffer.getNumSamples();
@@ -173,7 +173,7 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     ep.reverse = raw.fxReverse->load() > 0.5f;
     dsp.setEngineParams (ep);
 
-    mc::MicrocosmDsp::Global g;
+    mc::TesseraDsp::Global g;
     g.filter = raw.filter->load();
     g.resonance = raw.resonance->load();
     g.mix = raw.mix->load();
@@ -221,17 +221,17 @@ void MicrocosmProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         onsetFlash.store (true);
 }
 
-int MicrocosmProcessor::getNumPrograms()
+int TesseraProcessor::getNumPrograms()
 {
     return Presets::count;
 }
 
-const juce::String MicrocosmProcessor::getProgramName (int index)
+const juce::String TesseraProcessor::getProgramName (int index)
 {
     return juce::isPositiveAndBelow (index, Presets::count) ? Presets::list[index].name : "";
 }
 
-void MicrocosmProcessor::setCurrentProgram (int index)
+void TesseraProcessor::setCurrentProgram (int index)
 {
     if (! juce::isPositiveAndBelow (index, Presets::count))
         return;
@@ -262,7 +262,7 @@ void MicrocosmProcessor::setCurrentProgram (int index)
     set (ParamIDs::hold, 0.0f);
 }
 
-void MicrocosmProcessor::getStateInformation (juce::MemoryBlock& destData)
+void TesseraProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
     auto state = apvts.copyState();
     std::unique_ptr<juce::XmlElement> xml (state.createXml());
@@ -272,7 +272,7 @@ void MicrocosmProcessor::getStateInformation (juce::MemoryBlock& destData)
     copyXmlToBinary (*xml, destData);
 }
 
-void MicrocosmProcessor::setStateInformation (const void* data, int sizeInBytes)
+void TesseraProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
     std::unique_ptr<juce::XmlElement> xml (getXmlFromBinary (data, sizeInBytes));
     if (xml != nullptr && xml->hasTagName (apvts.state.getType()))
@@ -294,12 +294,12 @@ void MicrocosmProcessor::setStateInformation (const void* data, int sizeInBytes)
     }
 }
 
-juce::AudioProcessorEditor* MicrocosmProcessor::createEditor()
+juce::AudioProcessorEditor* TesseraProcessor::createEditor()
 {
-    return new MicrocosmEditor (*this);
+    return new TesseraEditor (*this);
 }
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new MicrocosmProcessor();
+    return new TesseraProcessor();
 }

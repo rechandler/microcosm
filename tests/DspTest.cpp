@@ -1,7 +1,7 @@
-// Headless test for the Microcosm DSP chain. Runs every algorithm/variation
+// Headless test for the Tessera DSP chain. Runs every algorithm/variation
 // (44 presets) plus hold and reverse over synthetic plucked
 // input, and checks for silence, NaNs and runaway levels.
-#include "../Source/dsp/MicrocosmDsp.h"
+#include "../Source/dsp/TesseraDsp.h"
 #include "../Source/Presets.h"
 #include <chrono>
 #if defined(__SSE__) || defined(_M_X64)
@@ -37,7 +37,7 @@ void makeInput (std::vector<float>& l, std::vector<float>& r, int n)
 
 struct Stats { float rms = 0, peak = 0; bool finite = true; };
 
-Stats run (MicrocosmDsp& dsp, std::vector<float> l, std::vector<float> r, int startSample = 0)
+Stats run (TesseraDsp& dsp, std::vector<float> l, std::vector<float> r, int startSample = 0)
 {
     Stats st;
     double sum = 0;
@@ -75,9 +75,9 @@ int main()
     {
         for (int v = 0; v < 4; ++v)
         {
-            MicrocosmDsp dsp;
+            TesseraDsp dsp;
             dsp.prepare (kSr, kBlock);
-            MicrocosmDsp::Global g;
+            TesseraDsp::Global g;
             g.mix = 1.0f; // wet only
             g.space = 0.0f;
             dsp.setGlobal (g);
@@ -103,9 +103,9 @@ int main()
     {
         for (float x : { 0.0f, 1.0f })
         {
-            MicrocosmDsp dsp;
+            TesseraDsp dsp;
             dsp.prepare (kSr, kBlock);
-            MicrocosmDsp::Global g;
+            TesseraDsp::Global g;
             g.space = 1.0f;
             g.reverbMode = a % Reverb::NumModes; // includes Shimmer and Cathedral
             g.filter = x;
@@ -130,9 +130,9 @@ int main()
     // HOLD: input stops, the effect keeps sounding from the frozen buffer.
     for (int a : { (int) Engine::Mosaic, (int) Engine::Haze, (int) Engine::Pattern, (int) Engine::Strum })
     {
-        MicrocosmDsp dsp;
+        TesseraDsp dsp;
         dsp.prepare (kSr, kBlock);
-        MicrocosmDsp::Global g;
+        TesseraDsp::Global g;
         g.mix = 1.0f;
         g.space = 0.0f;
         dsp.setGlobal (g);
@@ -157,9 +157,9 @@ int main()
         const float shapes[3] = { 0.0f, 0.5f, 1.0f };
         for (int k = 0; k < 3; ++k)
         {
-            MicrocosmDsp dsp;
+            TesseraDsp dsp;
             dsp.prepare (kSr, kBlock);
-            MicrocosmDsp::Global g;
+            TesseraDsp::Global g;
             g.mix = 1.0f;
             g.space = 0.0f;
             dsp.setGlobal (g);
@@ -185,9 +185,9 @@ int main()
     {
         for (int v = 0; v < 4; ++v)
         {
-            MicrocosmDsp dsp;
+            TesseraDsp dsp;
             dsp.prepare (kSr, kBlock);
-            MicrocosmDsp::Global g;
+            TesseraDsp::Global g;
             g.mix = 1.0f;
             g.space = 0.0f;
             dsp.setGlobal (g);
@@ -246,9 +246,9 @@ int main()
         std::vector<float> l ((size_t) kSr * 4), r ((size_t) kSr * 4);
         for (size_t i = 0; i < l.size(); ++i)
             l[i] = r[i] = 0.3f * std::sin (kTwoPi * 15000.0f * (float) i / (float) kSr);
-        MicrocosmDsp dsp;
+        TesseraDsp dsp;
         dsp.prepare (kSr, kBlock);
-        MicrocosmDsp::Global g;
+        TesseraDsp::Global g;
         g.mix = 1.0f;
         g.space = 0.0f;
         dsp.setGlobal (g);
@@ -272,9 +272,9 @@ int main()
         for (int i = 0; i < Presets::count; ++i)
         {
             const auto& pr = Presets::list[i];
-            MicrocosmDsp dsp;
+            TesseraDsp dsp;
             dsp.prepare (kSr, kBlock);
-            MicrocosmDsp::Global g;
+            TesseraDsp::Global g;
             g.filter = pr.filter;
             g.resonance = pr.resonance;
             g.mix = pr.mix;
@@ -328,7 +328,7 @@ int main()
     // once per note.
     for (float level : { 0.003f, 0.3f })
     {
-        MicrocosmDsp dsp;
+        TesseraDsp dsp;
         dsp.prepare (kSr, kBlock);
         Engine::Params p;
         p.algo = Engine::Strum;
@@ -358,9 +358,9 @@ int main()
     {
         for (int v = 0; v < 4; ++v)
         {
-            MicrocosmDsp dsp;
+            TesseraDsp dsp;
             dsp.prepare (kSr, kBlock);
-            MicrocosmDsp::Global g;
+            TesseraDsp::Global g;
             g.mix = 1.0f;
             g.space = 0.0f;
             dsp.setGlobal (g);
@@ -457,7 +457,7 @@ int main()
     // Regression: note detection keeps its 30 ms look-back at 192 kHz.
     {
         const double hiSr = 192000.0;
-        MicrocosmDsp dsp;
+        TesseraDsp dsp;
         dsp.prepare (hiSr, kBlock);
         Engine::Params p;
         p.algo = Engine::Strum;
@@ -485,9 +485,9 @@ int main()
     // dry-ducking once still cut into it), with Space at 0.
     for (int a = 0; a < Engine::NumAlgos; ++a)
     {
-        MicrocosmDsp dsp;
+        TesseraDsp dsp;
         dsp.prepare (kSr, kBlock);
-        MicrocosmDsp::Global g;
+        TesseraDsp::Global g;
         g.mix = 0.0f;
         g.space = 0.0f;
         dsp.setGlobal (g);
@@ -511,13 +511,13 @@ int main()
 
     // Reverb position: "Effect only" must leave the dry untouched at Mix 0%
     // even with Space up, and every position must stay finite and bounded.
-    for (int pos = 0; pos < MicrocosmDsp::NumReverbPositions; ++pos)
+    for (int pos = 0; pos < TesseraDsp::NumReverbPositions; ++pos)
     {
         for (float mixV : { 0.0f, 0.5f, 1.0f })
         {
-            MicrocosmDsp dsp;
+            TesseraDsp dsp;
             dsp.prepare (kSr, kBlock);
-            MicrocosmDsp::Global g;
+            TesseraDsp::Global g;
             g.mix = mixV;
             g.space = 0.8f;
             g.reverbMode = Reverb::Shimmer;
@@ -529,7 +529,7 @@ int main()
             std::vector<float> l (inL.begin(), inL.begin() + (int) kSr * 4), r (inR.begin(), inR.begin() + (int) kSr * 4);
             const auto st = run (dsp, l, r);
             bool ok = st.finite && st.peak < 3.9f && st.rms > 0.005f;
-            if (pos == MicrocosmDsp::ReverbEffectOnly && mixV == 0.0f)
+            if (pos == TesseraDsp::ReverbEffectOnly && mixV == 0.0f)
             {
                 double eIn = 0;
                 for (int k = 0; k < (int) kSr * 4; ++k)
@@ -540,7 +540,7 @@ int main()
             {
                 ++failures;
                 std::printf ("reverb position %s, mix %.0f%%: rms=%.4f peak=%.2f  <-- FAIL\n",
-                             MicrocosmDsp::reverbPositionName (pos), mixV * 100.0f, st.rms, st.peak);
+                             TesseraDsp::reverbPositionName (pos), mixV * 100.0f, st.rms, st.peak);
             }
         }
     }
@@ -553,9 +553,9 @@ int main()
             for (float shape : { 0.0f, 0.25f, 0.45f, 0.55f, 1.0f })
                 for (float act : { 0.0f, 0.3f, 0.5f, 0.8f, 1.0f })
                 {
-                    MicrocosmDsp dsp;
+                    TesseraDsp dsp;
                     dsp.prepare (kSr, kBlock);
-                    MicrocosmDsp::Global g;
+                    TesseraDsp::Global g;
                     g.mix = 1.0f;
                     g.space = 0.0f;
                     dsp.setGlobal (g);
@@ -579,7 +579,7 @@ int main()
     // Visualizer snapshots: grain heads must report sensible positions
     // (inside the recent past) and the delays must report their taps.
     {
-        MicrocosmDsp dsp;
+        TesseraDsp dsp;
         dsp.prepare (kSr, kBlock);
         Engine::Params p;
         p.algo = Engine::Haze;
@@ -610,8 +610,8 @@ int main()
     // wipe must behave the same.
     for (int a = 0; a < Engine::NumAlgos; ++a)
     {
-        MicrocosmDsp dsp;
-        MicrocosmDsp::Global g;
+        TesseraDsp dsp;
+        TesseraDsp::Global g;
         g.mix = 1.0f;
         g.space = 0.0f;
         dsp.setGlobal (g); // before prepare, so Space starts at 0 (no reverb tail)

@@ -2,10 +2,10 @@
 
 #include "PluginProcessor.h"
 
-class MicrocosmLookAndFeel : public juce::LookAndFeel_V4
+class TesseraLookAndFeel : public juce::LookAndFeel_V4
 {
 public:
-    MicrocosmLookAndFeel();
+    TesseraLookAndFeel();
 
     void drawRotarySlider (juce::Graphics&, int x, int y, int w, int h, float pos, float start, float end,
                            juce::Slider&) override;
@@ -27,22 +27,33 @@ public:
 class EngineView : public juce::Component
 {
 public:
-    explicit EngineView (MicrocosmProcessor& p) : proc (p) {}
+    explicit EngineView (TesseraProcessor& p) : proc (p) {}
     void paint (juce::Graphics&) override;
 
 private:
-    MicrocosmProcessor& proc;
-    float inCols[MicrocosmProcessor::kVizColumns] {};
-    float outCols[MicrocosmProcessor::kVizColumns] {};
-    MicrocosmProcessor::VizVoice voices[MicrocosmProcessor::kVizMaxVoices] {};
-    MicrocosmProcessor::VizTap taps[MicrocosmProcessor::kVizMaxTaps] {};
+    TesseraProcessor& proc;
+    float inCols[TesseraProcessor::kVizColumns] {};
+    float outCols[TesseraProcessor::kVizColumns] {};
+    TesseraProcessor::VizVoice voices[TesseraProcessor::kVizMaxVoices] {};
+    TesseraProcessor::VizTap taps[TesseraProcessor::kVizMaxTaps] {};
 };
 
-class MicrocosmEditor : public juce::AudioProcessorEditor, private juce::Timer
+// HELP: a one-page quick reference drawn over the plugin. Opened with the
+// "?" button; click anywhere or press Esc to close.
+class HelpOverlay : public juce::Component
 {
 public:
-    explicit MicrocosmEditor (MicrocosmProcessor&);
-    ~MicrocosmEditor() override;
+    HelpOverlay();
+    void paint (juce::Graphics&) override;
+    void mouseUp (const juce::MouseEvent&) override { setVisible (false); }
+    bool keyPressed (const juce::KeyPress&) override;
+};
+
+class TesseraEditor : public juce::AudioProcessorEditor, private juce::Timer
+{
+public:
+    explicit TesseraEditor (TesseraProcessor&);
+    ~TesseraEditor() override;
 
     void paint (juce::Graphics&) override;
     void resized() override;
@@ -67,8 +78,8 @@ private:
     void setChoice (const char* paramId, int index);
     void layoutKnob (Knob&, juce::Rectangle<int> area);
 
-    MicrocosmProcessor& proc;
-    MicrocosmLookAndFeel lnf;
+    TesseraProcessor& proc;
+    TesseraLookAndFeel lnf;
 
     Knob activity, repeats, shape, time, filter, mix, space, drift;
     Knob resonance, output, character;
@@ -80,7 +91,8 @@ private:
     juce::Label reverbLabel, reverbPosLabel;
     std::unique_ptr<ComboAttachment> reverbAtt, reverbPosAtt;
 
-    juce::TextButton syncBtn, transportBtn, holdBtn, reverseBtn;
+    juce::TextButton syncBtn, transportBtn, holdBtn, reverseBtn, helpBtn;
+    HelpOverlay help;
     std::unique_ptr<ButtonAttachment> syncAtt, transportAtt, holdAtt, reverseAtt;
 
     juce::OwnedArray<juce::TextButton> algoButtons, variationButtons;
@@ -89,5 +101,5 @@ private:
     EngineView engineView { proc };
     float onsetGlow = 0.0f;
 
-    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MicrocosmEditor)
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TesseraEditor)
 };

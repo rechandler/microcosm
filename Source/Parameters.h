@@ -2,7 +2,7 @@
 
 #include <juce_audio_processors/juce_audio_processors.h>
 #include "dsp/Engine.h"
-#include "dsp/MicrocosmDsp.h"
+#include "dsp/TesseraDsp.h"
 
 namespace ParamIDs
 {
@@ -114,8 +114,8 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
     layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::reverbMode, 1 }, "Reverb Mode", modes, 2));
 
     StringArray positions;
-    for (int i = 0; i < mc::MicrocosmDsp::NumReverbPositions; ++i)
-        positions.add (mc::MicrocosmDsp::reverbPositionName (i));
+    for (int i = 0; i < mc::TesseraDsp::NumReverbPositions; ++i)
+        positions.add (mc::TesseraDsp::reverbPositionName (i));
     layout.add (std::make_unique<AudioParameterChoice> (ParameterID { ParamIDs::reverbPos, 1 }, "Reverb Position", positions, 0));
 
     layout.add (std::make_unique<AudioParameterFloat> (

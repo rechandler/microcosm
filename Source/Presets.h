@@ -1,6 +1,6 @@
 #pragma once
 
-#include "dsp/MicrocosmDsp.h"
+#include "dsp/TesseraDsp.h"
 
 // Factory presets: cinematic starting points for guitar. Each sets the
 // effect and sound-shaping controls; the looper is left alone.
@@ -16,7 +16,7 @@ struct Preset
     int reverbMode;
     float drift;
     bool reverse;
-    int reverbPosition = mc::MicrocosmDsp::ReverbAfter;
+    int reverbPosition = mc::TesseraDsp::ReverbAfter;
     float reverbCharacter = 0.5f; // the reverb's standard sound
 };
 
@@ -27,8 +27,8 @@ constexpr float open = 0.5f;
 
 using E = mc::Engine;
 using R = mc::Reverb;
-constexpr int before = mc::MicrocosmDsp::ReverbBefore;
-constexpr int effectOnly = mc::MicrocosmDsp::ReverbEffectOnly;
+constexpr int before = mc::TesseraDsp::ReverbBefore;
+constexpr int effectOnly = mc::TesseraDsp::ReverbEffectOnly;
 
 inline const Preset list[] = {
     // name                 algo         var  act    rep    shape  time filter     res    mix    space  reverb        drift  rev

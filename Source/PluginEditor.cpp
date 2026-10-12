@@ -4,7 +4,7 @@
 using namespace juce;
 
 //==============================================================================
-MicrocosmLookAndFeel::MicrocosmLookAndFeel()
+TesseraLookAndFeel::TesseraLookAndFeel()
 {
     setColour (Slider::textBoxTextColourId, text());
     setColour (Slider::textBoxOutlineColourId, Colours::transparentBlack);
@@ -19,7 +19,7 @@ MicrocosmLookAndFeel::MicrocosmLookAndFeel()
     setColour (TextButton::textColourOnId, panel());
 }
 
-void MicrocosmLookAndFeel::drawRotarySlider (Graphics& g, int x, int y, int w, int h, float pos, float start,
+void TesseraLookAndFeel::drawRotarySlider (Graphics& g, int x, int y, int w, int h, float pos, float start,
                                              float end, Slider& s)
 {
     const auto bounds = Rectangle<float> ((float) x, (float) y, (float) w, (float) h).reduced (4.0f);
@@ -56,7 +56,7 @@ void MicrocosmLookAndFeel::drawRotarySlider (Graphics& g, int x, int y, int w, i
     g.fillPath (p, AffineTransform::rotation (angle).translated (c.x, c.y));
 }
 
-void MicrocosmLookAndFeel::drawButtonBackground (Graphics& g, Button& b, const Colour&, bool over, bool down)
+void TesseraLookAndFeel::drawButtonBackground (Graphics& g, Button& b, const Colour&, bool over, bool down)
 {
     auto r = b.getLocalBounds().toFloat().reduced (1.5f);
     const bool on = b.getToggleState();
@@ -69,7 +69,7 @@ void MicrocosmLookAndFeel::drawButtonBackground (Graphics& g, Button& b, const C
     g.drawRoundedRectangle (r, 5.0f, 1.0f);
 }
 
-void MicrocosmLookAndFeel::drawButtonText (Graphics& g, TextButton& b, bool, bool)
+void TesseraLookAndFeel::drawButtonText (Graphics& g, TextButton& b, bool, bool)
 {
     g.setColour (b.getToggleState() ? panel() : text());
     g.setFont (FontOptions (12.5f, Font::bold));
@@ -77,7 +77,7 @@ void MicrocosmLookAndFeel::drawButtonText (Graphics& g, TextButton& b, bool, boo
 }
 
 //==============================================================================
-MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor (&p), proc (p)
+TesseraEditor::TesseraEditor (TesseraProcessor& p) : AudioProcessorEditor (&p), proc (p)
 {
     setLookAndFeel (&lnf);
 
@@ -114,12 +114,12 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
         label.setText (name, dontSendNotification);
         label.setJustificationType (Justification::centred);
         label.setFont (FontOptions (11.0f, Font::bold));
-        label.setColour (Label::textColourId, MicrocosmLookAndFeel::dim());
+        label.setColour (Label::textColourId, TesseraLookAndFeel::dim());
         addAndMakeVisible (label);
     };
     setupCombo (reverbMode, reverbLabel, ParamIDs::reverbMode, "REVERB", reverbAtt);
     setupCombo (reverbPosition, reverbPosLabel, ParamIDs::reverbPos, "POSITION", reverbPosAtt);
-    reverbLabel.setColour (Label::textColourId, MicrocosmLookAndFeel::text());
+    reverbLabel.setColour (Label::textColourId, TesseraLookAndFeel::text());
 
     setupToggle (syncBtn, syncAtt, ParamIDs::sync, "SYNC");
     setupToggle (transportBtn, transportAtt, ParamIDs::transport, "TRANSPORT");
@@ -141,7 +141,7 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
     presetLabel.setText ("PRESET", dontSendNotification);
     presetLabel.setJustificationType (Justification::centredRight);
     presetLabel.setFont (FontOptions (11.0f, Font::bold));
-    presetLabel.setColour (Label::textColourId, MicrocosmLookAndFeel::dim());
+    presetLabel.setColour (Label::textColourId, TesseraLookAndFeel::dim());
     addAndMakeVisible (presetLabel);
     setupToggle (holdBtn, holdAtt, ParamIDs::hold, "HOLD");
     setupToggle (reverseBtn, reverseAtt, ParamIDs::fxReverse, "REVERSE");
@@ -164,21 +164,32 @@ MicrocosmEditor::MicrocosmEditor (MicrocosmProcessor& p) : AudioProcessorEditor 
 
     addAndMakeVisible (engineView);
 
+    helpBtn.setButtonText ("?");
+    helpBtn.setTooltip ("Quick reference");
+    helpBtn.onClick = [this]
+    {
+        help.setVisible (true);
+        help.toFront (true);
+        help.grabKeyboardFocus();
+    };
+    addAndMakeVisible (helpBtn);
+    addChildComponent (help);
+
     setSize (940, 580);
     refreshSelectionButtons();
     startTimerHz (30);
 }
 
-MicrocosmEditor::~MicrocosmEditor()
+TesseraEditor::~TesseraEditor()
 {
     setLookAndFeel (nullptr);
 }
 
-void MicrocosmEditor::setupKnob (Knob& k, const char* paramId, const String& name, bool small)
+void TesseraEditor::setupKnob (Knob& k, const char* paramId, const String& name, bool small)
 {
     k.slider.setSliderStyle (Slider::RotaryHorizontalVerticalDrag);
     k.slider.setTextBoxStyle (Slider::TextBoxBelow, false, 90, 16);
-    k.slider.setColour (Slider::textBoxTextColourId, MicrocosmLookAndFeel::dim());
+    k.slider.setColour (Slider::textBoxTextColourId, TesseraLookAndFeel::dim());
     k.slider.setColour (Slider::textBoxOutlineColourId, Colours::transparentBlack);
     k.slider.setPopupDisplayEnabled (false, false, this);
     addAndMakeVisible (k.slider);
@@ -187,11 +198,11 @@ void MicrocosmEditor::setupKnob (Knob& k, const char* paramId, const String& nam
     k.label.setText (name, dontSendNotification);
     k.label.setJustificationType (Justification::centred);
     k.label.setFont (FontOptions (small ? 11.0f : 13.0f, Font::bold));
-    k.label.setColour (Label::textColourId, small ? MicrocosmLookAndFeel::dim() : MicrocosmLookAndFeel::text());
+    k.label.setColour (Label::textColourId, small ? TesseraLookAndFeel::dim() : TesseraLookAndFeel::text());
     addAndMakeVisible (k.label);
 }
 
-void MicrocosmEditor::setupToggle (TextButton& b, std::unique_ptr<ButtonAttachment>& att, const char* paramId,
+void TesseraEditor::setupToggle (TextButton& b, std::unique_ptr<ButtonAttachment>& att, const char* paramId,
                                    const String& text)
 {
     b.setButtonText (text);
@@ -200,7 +211,7 @@ void MicrocosmEditor::setupToggle (TextButton& b, std::unique_ptr<ButtonAttachme
     att = std::make_unique<ButtonAttachment> (proc.apvts, paramId, b);
 }
 
-void MicrocosmEditor::setChoice (const char* paramId, int index)
+void TesseraEditor::setChoice (const char* paramId, int index)
 {
     if (auto* param = dynamic_cast<AudioParameterChoice*> (proc.apvts.getParameter (paramId)))
     {
@@ -211,7 +222,7 @@ void MicrocosmEditor::setChoice (const char* paramId, int index)
 }
 
 // Effect/style button states and the style names for the current effect.
-void MicrocosmEditor::refreshSelectionButtons()
+void TesseraEditor::refreshSelectionButtons()
 {
     const int algo = (int) proc.apvts.getRawParameterValue (ParamIDs::algo)->load();
     const int var = (int) proc.apvts.getRawParameterValue (ParamIDs::variation)->load();
@@ -227,7 +238,7 @@ void MicrocosmEditor::refreshSelectionButtons()
 }
 
 // CHARACTER is named after what it does for the selected reverb.
-void MicrocosmEditor::refreshCharacterLabel()
+void TesseraEditor::refreshCharacterLabel()
 {
     const int mode = (int) proc.apvts.getRawParameterValue (ParamIDs::reverbMode)->load();
     if (mode == characterMode)
@@ -238,7 +249,7 @@ void MicrocosmEditor::refreshCharacterLabel()
     character.slider.updateText();
 }
 
-void MicrocosmEditor::timerCallback()
+void TesseraEditor::timerCallback()
 {
     if (presetBox.getSelectedId() != proc.getCurrentProgram() + 1)
         presetBox.setSelectedId (proc.getCurrentProgram() + 1, dontSendNotification);
@@ -256,19 +267,19 @@ void MicrocosmEditor::timerCallback()
     engineView.repaint();
 }
 
-void MicrocosmEditor::paint (Graphics& g)
+void TesseraEditor::paint (Graphics& g)
 {
-    g.fillAll (MicrocosmLookAndFeel::panel());
+    g.fillAll (TesseraLookAndFeel::panel());
 
     // header
-    g.setColour (MicrocosmLookAndFeel::text());
+    g.setColour (TesseraLookAndFeel::text());
     g.setFont (FontOptions (26.0f, Font::bold));
     g.drawText ("TESSERA", 24, 12, 300, 34, Justification::centredLeft);
 
     // panels
     auto drawPanel = [&g] (Rectangle<int> r)
     {
-        g.setColour (MicrocosmLookAndFeel::face().withAlpha (0.55f));
+        g.setColour (TesseraLookAndFeel::face().withAlpha (0.55f));
         g.fillRoundedRectangle (r.toFloat(), 10.0f);
         g.setColour (Colours::black.withAlpha (0.3f));
         g.drawRoundedRectangle (r.toFloat(), 10.0f, 1.0f);
@@ -279,12 +290,12 @@ void MicrocosmEditor::paint (Graphics& g)
     // The reverb section: type, position and its Character knob together.
     g.setColour (Colours::black.withAlpha (0.18f));
     g.fillRoundedRectangle (reverbArea.toFloat(), 8.0f);
-    g.setColour (MicrocosmLookAndFeel::accent().withAlpha (0.35f));
+    g.setColour (TesseraLookAndFeel::accent().withAlpha (0.35f));
     g.drawRoundedRectangle (reverbArea.toFloat().reduced (0.5f), 8.0f, 1.0f);
 
     // family labels
     g.setFont (FontOptions (11.0f, Font::bold));
-    g.setColour (MicrocosmLookAndFeel::dim());
+    g.setColour (TesseraLookAndFeel::dim());
     static const char* families[] = { "LOOPS", "GRAINS", "GLITCHES", "ECHOES" };
     for (int row = 0; row < 4; ++row)
     {
@@ -300,7 +311,7 @@ void MicrocosmEditor::paint (Graphics& g)
     auto d = displayArea.toFloat();
     g.setColour (Colour (0xff0d1013));
     g.fillRoundedRectangle (d, 8.0f);
-    g.setColour (MicrocosmLookAndFeel::accent().withAlpha (0.25f));
+    g.setColour (TesseraLookAndFeel::accent().withAlpha (0.25f));
     g.drawRoundedRectangle (d, 8.0f, 1.0f);
 
     const int algo = (int) proc.apvts.getRawParameterValue (ParamIDs::algo)->load();
@@ -311,16 +322,16 @@ void MicrocosmEditor::paint (Graphics& g)
         auto titleRow = inner.removeFromTop (30);
         const String effectName = String (mc::Engine::algoName (algo)).toUpperCase();
         const FontOptions titleFont (24.0f, Font::bold);
-        g.setColour (MicrocosmLookAndFeel::accent());
+        g.setColour (TesseraLookAndFeel::accent());
         g.setFont (titleFont);
         g.drawText (effectName, titleRow, Justification::centredLeft);
         const int w = GlyphArrangement::getStringWidthInt (Font (titleFont), effectName);
-        g.setColour (MicrocosmLookAndFeel::accent2());
+        g.setColour (TesseraLookAndFeel::accent2());
         g.setFont (FontOptions (20.0f, Font::bold));
         g.drawText (String ("  ") + mc::Engine::variationName (algo, var), titleRow.withTrimmedLeft (w),
                     Justification::centredLeft);
     }
-    g.setColour (MicrocosmLookAndFeel::dim());
+    g.setColour (TesseraLookAndFeel::dim());
     g.setFont (FontOptions (12.0f));
     g.drawText (String (mc::Engine::familyName (algo)).toUpperCase() + "  -  " + mc::Engine::variationDescription (algo, var),
                 inner.removeFromTop (18), Justification::centredLeft);
@@ -338,33 +349,35 @@ void MicrocosmEditor::paint (Graphics& g)
     const int spacePct = roundToInt (proc.apvts.getRawParameterValue (ParamIDs::space)->load() * 100.0f);
     const int position = (int) proc.apvts.getRawParameterValue (ParamIDs::reverbPos)->load();
     g.drawText ("SPACE  " + String (spacePct) + "%  " + mc::Reverb::modeName (mode) + "  -  "
-                    + String (mc::MicrocosmDsp::reverbPositionName (position)).toLowerCase(),
+                    + String (mc::TesseraDsp::reverbPositionName (position)).toLowerCase(),
                 inner.removeFromTop (18),
                 Justification::centredLeft);
 
     // onset LED
     const auto led = Rectangle<float> (d.getRight() - 26.0f, d.getY() + 14.0f, 12.0f, 12.0f);
-    g.setColour (MicrocosmLookAndFeel::accent2().withAlpha (0.15f + 0.85f * onsetGlow));
+    g.setColour (TesseraLookAndFeel::accent2().withAlpha (0.15f + 0.85f * onsetGlow));
     g.fillEllipse (led);
     const bool holding = proc.apvts.getRawParameterValue (ParamIDs::hold)->load() > 0.5f;
     if (holding)
     {
-        g.setColour (MicrocosmLookAndFeel::accent2());
+        g.setColour (TesseraLookAndFeel::accent2());
         g.setFont (FontOptions (12.0f, Font::bold));
         g.drawText ("HOLD", led.toNearestInt().translated (-52, -2).withWidth (44).withHeight (16), Justification::centredRight);
     }
 }
 
-void MicrocosmEditor::layoutKnob (Knob& k, Rectangle<int> area)
+void TesseraEditor::layoutKnob (Knob& k, Rectangle<int> area)
 {
     k.label.setBounds (area.removeFromTop (18));
     k.slider.setBounds (area);
 }
 
-void MicrocosmEditor::resized()
+void TesseraEditor::resized()
 {
     auto r = getLocalBounds().reduced (16);
     auto header = r.removeFromTop (44).withTrimmedLeft (200).reduced (0, 6);
+    help.setBounds (getLocalBounds());
+    helpBtn.setBounds (156, 16, 26, 26);
     transportBtn.setBounds (header.removeFromRight (110));
     header.removeFromRight (8);
     syncBtn.setBounds (header.removeFromRight (90));
@@ -440,9 +453,9 @@ void MicrocosmEditor::resized()
 //==============================================================================
 void EngineView::paint (Graphics& g)
 {
-    using LnF = MicrocosmLookAndFeel;
-    constexpr int cols = MicrocosmProcessor::kVizColumns;
-    constexpr float span = MicrocosmProcessor::kVizSeconds;
+    using LnF = TesseraLookAndFeel;
+    constexpr int cols = TesseraProcessor::kVizColumns;
+    constexpr float span = TesseraProcessor::kVizSeconds;
 
     auto r = getLocalBounds().toFloat();
     g.setColour (Colour (0xff0d1013));
@@ -595,5 +608,138 @@ void EngineView::paint (Graphics& g)
     {
         g.setColour (LnF::dim().withAlpha (0.7f));
         g.drawText ("play something...", plot, Justification::centred);
+    }
+}
+
+// ---------------------------------------------------------------------------
+namespace
+{
+struct HelpItem { const char* term; const char* text; };
+struct HelpSection { const char* title; std::vector<HelpItem> items; };
+
+const std::vector<std::vector<HelpSection>>& helpColumns()
+{
+    static const std::vector<std::vector<HelpSection>> columns {
+        {
+            { "LOOPS", {
+                { "Facets",  "Overlapping micro-loops at different speeds" },
+                { "Shuffle", "Recent playing sliced and re-sequenced" },
+                { "Bend",    "Loops whose pitch glides up or down" } } },
+            { "GRAINS", {
+                { "Mist",    "Smeared clouds of tiny grains" },
+                { "Drone",   "Sustained drones from repeating micro-loops" },
+                { "Ripple",  "Rhythmic chains of the notes you just played" } } },
+            { "GLITCHES", {
+                { "Chop",    "Stuttered, rearranged blocks" },
+                { "Cutout",  "Bursts that replace the dry guitar" },
+                { "Arp",     "Each note becomes an arpeggio" } } },
+            { "ECHOES", {
+                { "Rhythm",  "Rhythmic multi-tap delay" },
+                { "Prism",   "Multi-tap delay with filtered or pitched taps" } } },
+            { "STYLE", {
+                { "",        "Four flavours of the selected effect" } } },
+        },
+        {
+            { "CONTROLS", {
+                { "Activity",  "How busy: density, speed, number of taps" },
+                { "Repeats",   "How long: loop life, decay, steps, feedback" },
+                { "Shape",     "Each event's contour: plucky (left), flat (centre), swelling (right)" },
+                { "Time",      "The rhythmic unit. Note value with Sync on, milliseconds with it off" },
+                { "Filter",    "On the effect only. Left low-pass, right high-pass, centre open" },
+                { "Resonance", "Peak of the filter" },
+                { "Mix",       "Dry / effect balance. Both full at the centre" },
+                { "Space",     "How much reverb" },
+                { "Drift",     "Tape wow and flutter on the effect" },
+                { "Output",    "Final level" } } },
+        },
+        {
+            { "REVERB", {
+                { "Reverb",    "Glass, Velvet, Hall, Haze, Shimmer, Cathedral" },
+                { "Position",  "After the effect, before it, or on the effect only" },
+                { "Character", "Shapes the selected reverb. Centre is its standard sound:" },
+                { "   Glass",     "Air: dull wood to sparkling glass" },
+                { "   Velvet",    "Warmth: murky to smooth" },
+                { "   Hall",      "Decay: 2 s to 10 s" },
+                { "   Haze",      "Movement: still to seasick" },
+                { "   Shimmer",   "Sparkle: faint halo to rising choir" },
+                { "   Cathedral", "Bloom: instant to slow swell" } } },
+            { "BUTTONS", {
+                { "Sync",      "Lock Time to Live's tempo" },
+                { "Transport", "Run only while Live plays; stop clears the effect" },
+                { "Hold",      "Freeze what the effect is working on" },
+                { "Reverse",   "Play every loop, grain and echo backwards" } } },
+            { "ENGINE VIEW", {
+                { "Dots",      "Loops and grains at the moment they read from. Colour and height = pitch, size = level" },
+                { "Rings",     "Playing in reverse" },
+                { "\xe2\x97\x80 N older", "Heads reading from further back than 8 s" },
+                { "Markers",   "Echo taps (Rhythm, Prism)" } } },
+        },
+    };
+    return columns;
+}
+} // namespace
+
+HelpOverlay::HelpOverlay()
+{
+    setWantsKeyboardFocus (true);
+    setInterceptsMouseClicks (true, false);
+}
+
+bool HelpOverlay::keyPressed (const KeyPress& key)
+{
+    if (key == KeyPress::escapeKey)
+    {
+        setVisible (false);
+        return true;
+    }
+    return false;
+}
+
+void HelpOverlay::paint (Graphics& g)
+{
+    using LnF = TesseraLookAndFeel;
+    g.fillAll (Colours::black.withAlpha (0.55f));
+    auto box = getLocalBounds().toFloat().reduced (16.0f);
+    g.setColour (LnF::panel());
+    g.fillRoundedRectangle (box, 12.0f);
+    g.setColour (LnF::accent().withAlpha (0.5f));
+    g.drawRoundedRectangle (box.reduced (0.5f), 12.0f, 1.0f);
+
+    auto area = box.reduced (24.0f, 16.0f);
+    auto title = area.removeFromTop (30.0f);
+    g.setColour (LnF::text());
+    g.setFont (FontOptions (18.0f, Font::bold));
+    g.drawText ("TESSERA  QUICK REFERENCE", title, Justification::centredLeft);
+    g.setColour (LnF::dim());
+    g.setFont (FontOptions (11.0f));
+    g.drawText ("click anywhere or press Esc to close", title, Justification::centredRight);
+    area.removeFromTop (8.0f);
+
+    const auto& columns = helpColumns();
+    const float gap = 24.0f;
+    const float colW = (area.getWidth() - gap * (float) (columns.size() - 1)) / (float) columns.size();
+    for (size_t c = 0; c < columns.size(); ++c)
+    {
+        auto col = area.withX (area.getX() + (float) c * (colW + gap)).withWidth (colW);
+        for (const auto& section : columns[c])
+        {
+            g.setColour (LnF::accent());
+            g.setFont (FontOptions (11.0f, Font::bold));
+            g.drawText (section.title, col.removeFromTop (16.0f), Justification::centredLeft);
+            col.removeFromTop (2.0f);
+            for (const auto& item : section.items)
+            {
+                AttributedString s;
+                s.setWordWrap (AttributedString::byWord);
+                if (*item.term != 0)
+                    s.append (String (CharPointer_UTF8 (item.term)) + "   ", FontOptions (12.0f, Font::bold), LnF::text());
+                s.append (String (CharPointer_UTF8 (item.text)), FontOptions (12.0f), LnF::dim());
+                TextLayout layout;
+                layout.createLayout (s, colW);
+                layout.draw (g, col.removeFromTop (layout.getHeight()));
+                col.removeFromTop (4.0f);
+            }
+            col.removeFromTop (10.0f);
+        }
     }
 }
