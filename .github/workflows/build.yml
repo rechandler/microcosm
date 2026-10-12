@@ -134,6 +134,20 @@ jobs:
         with:
           path: artifacts
           merge-multiple: true
+      # A manual release replaces any existing release (and tag) of the same
+      # version, so a version can be re-published from newer code.
+      - name: Remove an existing release with this tag
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release delete "$TAG" --cleanup-tag --yes --repo "$GITHUB_REPOSITORY"
+          fi
+          if gh api "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG" > /dev/null 2>&1; then
+            gh api -X DELETE "repos/$GITHUB_REPOSITORY/git/refs/tags/$TAG"
+          fi
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ inputs.release || github.ref_name }}
