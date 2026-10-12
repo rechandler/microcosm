@@ -1,5 +1,9 @@
 Tessera is a granular, micro-loop, glitch and multidelay effect, tuned for cinematic guitar textures.
 
+## New in 1.0.1
+
+- Fixed: picking a preset sometimes needed a second click before it loaded.
+
 ## Downloads
 
 - **Tessera-Windows-x64.zip**: VST3 for Ableton Live and other hosts on Windows, plus a standalone app.
