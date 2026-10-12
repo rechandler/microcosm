@@ -127,12 +127,14 @@ TesseraEditor::TesseraEditor (TesseraProcessor& p) : AudioProcessorEditor (&p), 
 
     for (int i = 0; i < Presets::count; ++i)
         presetBox.addItem (Presets::list[i].name, i + 1);
-    presetBox.setSelectedId (proc.getCurrentProgram() + 1, dontSendNotification);
+    shownProgram = proc.getCurrentProgram();
+    presetBox.setSelectedId (shownProgram + 1, dontSendNotification);
     presetBox.onChange = [this]
     {
         const int index = presetBox.getSelectedId() - 1;
         if (index >= 0 && index != proc.getCurrentProgram())
         {
+            shownProgram = index;
             proc.setCurrentProgram (index);
             proc.updateHostDisplay (AudioProcessorListener::ChangeDetails().withProgramChanged (true));
         }
@@ -251,8 +253,14 @@ void TesseraEditor::refreshCharacterLabel()
 
 void TesseraEditor::timerCallback()
 {
-    if (presetBox.getSelectedId() != proc.getCurrentProgram() + 1)
-        presetBox.setSelectedId (proc.getCurrentProgram() + 1, dontSendNotification);
+    // Follow program changes made elsewhere (e.g. from Live). Only react when
+    // the processor's program changes: the menu reports a pick a moment after
+    // it shows it, and resetting it to match in between would swallow it.
+    if (const int program = proc.getCurrentProgram(); program != shownProgram)
+    {
+        shownProgram = program;
+        presetBox.setSelectedId (program + 1, dontSendNotification);
+    }
 
     refreshSelectionButtons();
 

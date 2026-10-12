@@ -85,6 +85,7 @@ private:
     Knob resonance, output, character;
     int characterMode = -1;
     juce::ComboBox presetBox;
+    int shownProgram = 0; // the program the preset menu was last synced to
     juce::Label presetLabel;
 
     juce::ComboBox reverbMode, reverbPosition;
