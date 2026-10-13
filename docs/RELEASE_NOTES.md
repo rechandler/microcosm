@@ -1,5 +1,9 @@
 Tessera is a granular, micro-loop, glitch and multidelay effect, tuned for cinematic guitar textures.
 
+## New in 1.0.2
+
+- Smoother Shimmer reverb: the octaves no longer climb into harsh fizz, and Sparkle's bright end is gentler.
+
 ## New in 1.0.1
 
 - Fixed: picking a preset sometimes needed a second click before it loaded.
