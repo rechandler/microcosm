@@ -55,7 +55,7 @@ public:
         shifter.setRatio (2.0f);
         shifter.setGrainLength (0.1f * sr);
         shifter.reset();
-        shimAA.setCutoff (0.2f * sr, sr);
+        shimAA.setCutoff (kShimCutoff, sr);
         shimAA.reset();
         shimHpCoeff = 1.0f - std::exp (-kTwoPi * 250.0f / sr);
         shimHp = 0.0f;
@@ -97,7 +97,7 @@ public:
             { 0.65f,  2.2f,  2800.0f, 0.015f, 0.0006f, 0.65f, 0.0f }, // Velvet: medium, dark
             { 1.00f,  4.5f,  6500.0f, 0.025f, 0.0008f, 0.70f, 0.0f }, // Hall: large hall
             { 1.00f, 14.0f,  5000.0f, 0.040f, 0.0020f, 0.75f, 0.0f }, // Haze: long ambient wash
-            { 1.20f, 10.0f,  7500.0f, 0.030f, 0.0015f, 0.72f, 1.0f }, // Shimmer
+            { 1.20f, 10.0f,  kShimDamp, 0.030f, 0.0015f, 0.72f, 1.0f }, // Shimmer
             { 1.70f,  9.0f,  8500.0f, 0.060f, 0.0018f, 0.78f, 0.0f }, // Cathedral
         };
         base = settings[std::min (std::max (mode, 0), NumModes - 1)];
@@ -239,8 +239,12 @@ private:
                             tiltAmount = std::pow (2.0f, 1.0f * k); break;
             case Hall:      rt60 = hallDecaySeconds (c); break;                              // 2 s .. 10 s
             case Haze:      modDepth = base.modDepth * std::pow (4.0f, k); break;            // still .. seasick
-            case Shimmer:   shim = base.shimmer * (1.0f + 0.75f * k);                        // faint halo .. rising choir
-                            damp = base.damp * std::pow (2.0f, k); break;
+            case Shimmer:   shim = base.shimmer * (1.0f + 0.5f * k);                         // faint halo .. rising choir
+                            damp = base.damp * std::pow (2.0f, 0.4f * k);
+                            // Only the tail below this is pitched up again, so the
+                            // shimmer climbs an octave or two, not into fizz.
+                            shimAA.setCutoff (kShimCutoff * std::pow (2.0f, 0.3f * k), sr);
+                            tiltAmount = kShimTilt; break;
             case Cathedral:
                 if (k < 0.0f)
                     predelay = lerp (base.predelay, 0.005f, -k);                             // instant
@@ -325,6 +329,9 @@ private:
     Settings base {};
     float characterTarget = 0.5f, characterNow = 0.5f;
     int characterCounter = 0;
+    // Shimmer tone: feed cutoff, loop damping and output tilt (tuned on guitar
+    // so the octaves stay sweet rather than fizzy).
+    static constexpr float kShimCutoff = 3500.0f, kShimDamp = 4500.0f, kShimTilt = 0.7f;
     static constexpr int kBloomFeeds = 12;
     // Rising feed levels (a crescendo), summing to about the same energy
     // as the single feed they replace.
