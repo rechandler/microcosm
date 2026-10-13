@@ -14,7 +14,7 @@ TesseraProcessor::TesseraProcessor()
             p (ParamIDs::resonance), p (ParamIDs::mix), p (ParamIDs::space), p (ParamIDs::reverbMode),
             p (ParamIDs::hold), p (ParamIDs::fxReverse), p (ParamIDs::output), p (ParamIDs::drift),
             p (ParamIDs::reverbPos), p (ParamIDs::transport),
-            p (ParamIDs::reverbChar) };
+            p (ParamIDs::reverbChar), p (ParamIDs::lofi) };
 }
 
 bool TesseraProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const
@@ -171,6 +171,8 @@ void TesseraProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
     ep.unitSamples = unitSamples;
     ep.hold = raw.hold->load() > 0.5f;
     ep.reverse = raw.fxReverse->load() > 0.5f;
+    const float lofiAmount = raw.lofi->load();
+    ep.clock = mc::LoFi::speedFor (lofiAmount);
     dsp.setEngineParams (ep);
 
     mc::TesseraDsp::Global g;
@@ -183,6 +185,7 @@ void TesseraProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
     g.reverbCharacter = raw.reverbChar->load();
     g.reverbPosition = (int) raw.reverbPos->load();
     g.drift = raw.drift->load();
+    g.lofi = lofiAmount;
     g.outputGain = juce::Decibels::decibelsToGain (raw.output->load());
     // TRANSPORT: the effect runs only while the host plays.
     g.transportRunning = raw.transport->load() < 0.5f || ! hasTransport || playing;
@@ -258,6 +261,7 @@ void TesseraProcessor::setCurrentProgram (int index)
     set (ParamIDs::reverbPos, (float) pr.reverbPosition);
     set (ParamIDs::reverbChar, pr.reverbCharacter);
     set (ParamIDs::drift, pr.drift);
+    set (ParamIDs::lofi, pr.lofi);
     set (ParamIDs::fxReverse, pr.reverse ? 1.0f : 0.0f);
     set (ParamIDs::hold, 0.0f);
 }

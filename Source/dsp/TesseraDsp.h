@@ -2,6 +2,7 @@
 
 #include "Engine.h"
 #include "Drift.h"
+#include "LoFi.h"
 #include "Reverb.h"
 
 namespace mc
@@ -36,6 +37,7 @@ public:
         float reverbCharacter = 0.5f; // per-mode CHARACTER knob, 0.5 = standard
         int reverbPosition = ReverbAfter;
         float drift = 0.0f;      // tape wow/flutter on the effect signal
+        float lofi = 0.0f;       // low-sample-rate / low-bit character on the effect signal
         float outputGain = 1.0f; // linear
         bool transportRunning = true; // false: the effect fades out and clears (host stopped)
     };
@@ -46,6 +48,7 @@ public:
         blockSize = std::max (16, maxBlockSize);
         engine.prepare (sampleRate);
         drift.prepare (sampleRate);
+        lofi.prepare (sampleRate);
         duckDelay.assign ((size_t) nextPowerOfTwo (drift.latencySamples() + 1), 0.0f);
         duckPos = 0;
         reverb.prepare (sampleRate);
@@ -148,6 +151,7 @@ private:
             float wl = std::isfinite (wetL[(size_t) i]) ? wetL[(size_t) i] * gate : 0.0f;
             float wr = std::isfinite (wetR[(size_t) i]) ? wetR[(size_t) i] * gate : 0.0f;
             drift.process (wl, wr, g.drift);
+            lofi.process (wl, wr, g.lofi);
 
             // The effect signal now runs Drift's few ms behind, so delay the
             // INTERRUPT dry-duck by the same amount to keep them aligned.
@@ -239,6 +243,7 @@ private:
     Global g;
     Engine engine;
     Drift drift;
+    LoFi lofi;
     std::vector<float> duckDelay;
     int duckPos = 0;
     Reverb reverb;

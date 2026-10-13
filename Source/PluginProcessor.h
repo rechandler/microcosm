@@ -96,7 +96,7 @@ private:
         std::atomic<float>* space; std::atomic<float>* reverbMode;
         std::atomic<float>* hold; std::atomic<float>* fxReverse; std::atomic<float>* output;
         std::atomic<float>* drift; std::atomic<float>* reverbPos; std::atomic<float>* transport;
-        std::atomic<float>* reverbChar;
+        std::atomic<float>* reverbChar; std::atomic<float>* lofi;
     } raw {};
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TesseraProcessor)

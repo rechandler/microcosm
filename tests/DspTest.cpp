@@ -729,6 +729,57 @@ int main()
         }
     }
 
+    // LO-FI: grittier and darker as it goes up, never unstable or much
+    // quieter, and past halfway the loops and grains slow down (half speed
+    // at full).
+    {
+        const int len = (int) (kSr * 6.0);
+        float prevBright = 1.0e9f, cleanLevel = 0.0f;
+        for (float amount : { 0.0f, 0.25f, 0.5f, 0.75f, 1.0f })
+        {
+            TesseraDsp dsp;
+            TesseraDsp::Global g;
+            g.mix = 1.0f;
+            g.space = 0.0f;
+            g.lofi = amount;
+            dsp.setGlobal (g);
+            dsp.prepare (kSr, kBlock);
+            Engine::Params p;
+            p.algo = Engine::Mosaic;
+            p.variation = 1; // speeds 1 and 0.5
+            p.activity = 0.8f;
+            p.unitSamples = 0.5 * kSr;
+            p.clock = LoFi::speedFor (amount);
+            dsp.setEngineParams (p);
+            std::vector<float> l (inL.begin(), inL.begin() + len), r (inR.begin(), inR.begin() + len);
+            const auto st = run (dsp, l, r, (int) kSr);
+            double e = 0, d = 0;
+            for (int i = (int) kSr; i < len; ++i)
+            {
+                e += (double) l[(size_t) i] * l[(size_t) i];
+                const double x = l[(size_t) i] - l[(size_t) i - 1];
+                d += x * x;
+            }
+            const float bright = 10.0f * std::log10 ((float) (d / (e + 1.0e-20)) + 1.0e-20f);
+            const float level = 20.0f * std::log10 (st.rms + 1.0e-9f);
+            if (amount == 0.0f)
+                cleanLevel = level;
+            Engine::VizVoice vv[32];
+            const int nv = dsp.getEngine().snapshotVoices (vv, 32);
+            float maxSpeed = 0.0f;
+            for (int k = 0; k < nv; ++k)
+                maxSpeed = std::max (maxSpeed, std::abs (vv[k].speed));
+            const float expectMax = (float) LoFi::speedFor (amount);
+            const bool ok = st.finite && st.peak < 3.9f && std::abs (level - cleanLevel) < 8.0f
+                            && bright <= prevBright + 0.5f && nv > 0 && std::abs (maxSpeed - expectMax) < 0.03f;
+            if (! ok)
+                ++failures;
+            std::printf ("lofi %3.0f%%: level %5.1f dB  bright %5.1f  voices %d  max speed %.2f (expect %.2f)%s\n",
+                         amount * 100.0f, level, bright, nv, maxSpeed, expectMax, ok ? "" : "  <-- FAIL");
+            prevBright = bright;
+        }
+    }
+
     std::printf ("\n%s (%d failures)\n", failures == 0 ? "ALL PASSED" : "FAILED", failures);
     return failures == 0 ? 0 : 1;
 }

@@ -90,6 +90,8 @@ TesseraEditor::TesseraEditor (TesseraProcessor& p) : AudioProcessorEditor (&p), 
     setupKnob (space, ParamIDs::space, "SPACE", false);
     setupKnob (drift, ParamIDs::drift, "DRIFT", false);
     setupKnob (resonance, ParamIDs::resonance, "RESONANCE", true);
+    setupKnob (lofiKnob, ParamIDs::lofi, "LO-FI", true);
+    lofiKnob.slider.setTooltip ("Old-sampler grit on the effect. Past halfway it also slows the loops down");
     setupKnob (output, ParamIDs::output, "OUTPUT", true);
     setupKnob (character, ParamIDs::reverbChar, "CHARACTER", true);
     character.slider.setTooltip ("Shapes the selected reverb: Air, Warmth, Decay, Movement, Sparkle or Bloom");
@@ -177,7 +179,7 @@ TesseraEditor::TesseraEditor (TesseraProcessor& p) : AudioProcessorEditor (&p), 
     addAndMakeVisible (helpBtn);
     addChildComponent (help);
 
-    setSize (940, 580);
+    setSize (1000, 580);
     refreshSelectionButtons();
     startTimerHz (30);
 }
@@ -393,7 +395,7 @@ void TesseraEditor::resized()
     presetBox.setBounds (header.removeFromRight (260));
     presetLabel.setBounds (header.removeFromRight (70));
 
-    leftArea = r.removeFromLeft (440);
+    leftArea = r.removeFromLeft (500);
     r.removeFromLeft (16);
     auto right = r;
 
@@ -410,8 +412,8 @@ void TesseraEditor::resized()
     l.removeFromTop (12);
 
     auto row3 = l.removeFromTop (110);
-    for (auto* k : { &resonance, &output })
-        layoutKnob (*k, row3.removeFromLeft (80).reduced (2, 6));
+    for (auto* k : { &resonance, &lofiKnob, &output })
+        layoutKnob (*k, row3.removeFromLeft (76).reduced (2, 6));
     row3.removeFromLeft (6);
     reverbArea = row3.withTrimmedRight (10);
     auto reverbBox = reverbArea.reduced (10, 6);
@@ -658,6 +660,7 @@ const std::vector<std::vector<HelpSection>>& helpColumns()
                 { "Mix",       "Dry / effect balance. Both full at the centre" },
                 { "Space",     "How much reverb" },
                 { "Drift",     "Tape wow and flutter on the effect" },
+                { "Lo-Fi",     "Old-sampler grit on the effect: lower sample rate and bits. Past halfway it also slows loops and grains, down an octave at full" },
                 { "Output",    "Final level" } } },
         },
         {

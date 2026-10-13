@@ -18,6 +18,7 @@ struct Preset
     bool reverse;
     int reverbPosition = mc::TesseraDsp::ReverbAfter;
     float reverbCharacter = 0.5f; // the reverb's standard sound
+    float lofi = 0.0f;            // clean
 };
 
 // Filter knob positions for a given readout ("HP 35%" -> hp (0.35f)).
@@ -29,6 +30,7 @@ using E = mc::Engine;
 using R = mc::Reverb;
 constexpr int before = mc::TesseraDsp::ReverbBefore;
 constexpr int effectOnly = mc::TesseraDsp::ReverbEffectOnly;
+constexpr int after = mc::TesseraDsp::ReverbAfter;
 
 inline const Preset list[] = {
     // name                 algo         var  act    rep    shape  time filter     res    mix    space  reverb        drift  rev
@@ -48,6 +50,9 @@ inline const Preset list[] = {
     { "Cloud Choir",        E::Haze,      0, 0.70f, 0.75f, 0.75f, 6, lp (0.10f), 0.10f, 0.70f, 0.60f, R::Cathedral, 0.25f, false, before },
     // Reverb on the effect only: dry guitar stays clear in front of a shimmer halo.
     { "Clean Halo",         E::Warp,      2, 0.00f, 0.60f, 0.60f, 9, hp (0.35f), 0.15f, 0.50f, 0.85f, R::Shimmer,   0.15f, false, effectOnly },
+    // Lo-Fi: worn sampler and tape textures.
+    { "Worn Cassette",      E::Mosaic,    1, 0.45f, 0.65f, 0.55f, 8, lp (0.10f), 0.15f, 0.55f, 0.50f, R::Velvet,    0.55f, false, after, 0.5f, 0.45f },
+    { "Dusty Choir",        E::Haze,      0, 0.70f, 0.75f, 0.75f, 6, open,      0.10f, 0.60f, 0.70f, R::Haze,      0.30f, false, after, 0.5f, 0.50f },
 };
 
 inline constexpr int count = (int) (sizeof (list) / sizeof (list[0]));

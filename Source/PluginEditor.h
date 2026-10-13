@@ -82,7 +82,7 @@ private:
     TesseraLookAndFeel lnf;
 
     Knob activity, repeats, shape, time, filter, mix, space, drift;
-    Knob resonance, output, character;
+    Knob resonance, lofiKnob, output, character;
     int characterMode = -1;
     juce::ComboBox presetBox;
     int shownProgram = 0; // the program the preset menu was last synced to

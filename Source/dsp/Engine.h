@@ -95,6 +95,7 @@ public:
         double unitSamples = 24000.0;
         bool hold = false;
         bool reverse = false;
+        double clock = 1.0; // playback-rate scale for loops and grains (LO-FI)
     };
 
     void prepare (double sampleRate)
@@ -135,6 +136,7 @@ public:
         unitCountdown = 0;
         samplesSinceOnset = 1.0e9f;
         delayGainSmooth = 1.0f;
+        clockNow = prm.clock;
     }
 
     void setParams (const Params& p)
@@ -209,7 +211,7 @@ public:
                 break;
             if (! v.isActive() || v.isWaiting())
                 continue;
-            out[n++] = { (float) ((now - v.readPosition()) / sr), v.currentLevel(), (float) v.currentSpeed() };
+            out[n++] = { (float) ((now - v.readPosition()) / sr), v.currentLevel(), (float) (v.currentSpeed() * clockNow) };
         }
         return n;
     }
@@ -254,6 +256,7 @@ public:
             const float xl = halted ? 0.0f : inL[i], xr = halted ? 0.0f : inR[i];
             history.write (xl, xr);
 
+            clockNow += 0.0004 * (prm.clock - clockNow); // glide like a tape slowing down
             prevClock = clock;
             clock += clockInc;
             ++counter;
@@ -279,7 +282,7 @@ public:
             {
                 if (! v.isActive())
                     continue;
-                v.render (history, l, r);
+                v.render (history, l, r, clockNow);
                 if (v.ducksDry())
                     d = std::max (d, v.currentEnvelope());
             }
@@ -994,5 +997,6 @@ private:
     float duckSmooth = 0.0f;
     float levelTrim = 1.0f, levelTrimTarget = 1.0f, levelTrimCoeff = 0.001f;
     float samplesSinceOnset = 1.0e9f, delayGainSmooth = 1.0f;
+    double clockNow = 1.0;
 };
 } // namespace mc

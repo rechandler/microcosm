@@ -61,6 +61,7 @@ Click **?** next to the Tessera title for a one-page quick reference inside the 
 | **Character** | Shapes the selected reverb; its label changes with the reverb. Centre is the reverb's standard sound. **Glass – Air:** dull wood ↔ sparkling glass. **Velvet – Warmth:** murky ↔ smooth. **Hall – Decay:** 2 s ↔ 10 s. **Haze – Movement:** still ↔ chorused, seasick. **Shimmer – Sparkle:** faint halo ↔ bright, endlessly rising choir. **Cathedral – Bloom:** instant ↔ distant, each note swelling slowly into the space. |
 | **Reverb Position** | Where Space sits: **After effect** (guitar and effect share one space), **Before effect** (the effect works on the reverberated guitar, giving dense, smooth pads), or **Effect only** (your dry guitar stays dry and clear while the textures sit in the space). |
 | **Drift** | Tape-style wow, flutter and slow pitch wander on the effect, slightly different per side. Around 15–40% gives gentle movement; higher gives lo-fi warble. |
+| **Lo-Fi** | Old-sampler grit on the effect: lowers the sample rate and bit depth, getting darker and dustier as it goes up. Past halfway it also slows the loops and grains down, like a sampler on a slower clock, reaching half speed (an octave down) at full. |
 | **Hold** | Freezes the audio the effect is working on, so it keeps generating from what you just played while you play over it. In the delays it becomes an infinite repeat. |
 | **Reverse** | Plays every loop, grain and tap backwards. |
 | **Output** | Output trim (dB). |
@@ -70,7 +71,8 @@ Click **?** next to the Tessera title for a one-page quick reference inside the 
 
 Pick these from the **Preset** menu at the top of the plugin, or from Live's program list. They're cinematic starting points for guitar:
 Shimmer Cathedral, Frozen Swell, Reverse Bloom, Granular Choir, Tape Memory, Octave Clouds, Rising Tide, Ghost Echoes,
-Crystal Arp, Distant Signal, Infinite Pad, Cloud Choir (reverb before the effect) and Clean Halo (reverb on the effect only). Choosing one sets the effect and sound controls.
+Crystal Arp, Distant Signal, Infinite Pad, Cloud Choir (reverb before the effect), Clean Halo (reverb on the effect only),
+Worn Cassette and Dusty Choir (both with Lo-Fi). Choosing one sets the effect and sound controls.
 
 ### Sound quality notes
 

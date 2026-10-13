@@ -32,10 +32,11 @@ Tessera is a granular, micro-loop, glitch and multidelay effect, tuned for cinem
 - **Character:** one knob that shapes each reverb its own way: Air (Glass), Warmth (Velvet), Decay (Hall), Movement (Haze), Sparkle (Shimmer) and Bloom (Cathedral).
 - **Reverb Position:** after the effect, before it (the effect chops up the reverb wash) or on the effect only (dry guitar stays dry).
 - **Drift:** tape-style wow and flutter on the effect sound.
+- **Lo-Fi:** old-sampler grit (lower sample rate and bits). Past halfway it also slows loops and grains, down to half speed.
 - **Hold** (freeze) and **Reverse**.
 - **Transport:** the effect starts and stops with Live's transport. Stopping fades it out and clears it; play starts it fresh, on the grid. Turn it off to keep the effect running while Live is stopped.
 - **Engine View:** a live display of your playing, the effect output, every active loop and grain (by position, pitch and level, with rings for reversed ones) and the delay taps.
-- **14 factory presets**, including Shimmer Cathedral, Frozen Swell, Reverse Bloom, Infinite Pad, Cloud Choir and Clean Halo.
+- **16 factory presets**, including Shimmer Cathedral, Frozen Swell, Reverse Bloom, Infinite Pad, Cloud Choir, Clean Halo and Worn Cassette.
 - **Clean octave-up:**
   - Band-limited playback means pitched-up loops and grains don't alias.
   - A waveform-aligned pitch shifter keeps sustained notes clean in Prism and Shimmer.

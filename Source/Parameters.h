@@ -25,6 +25,7 @@ inline constexpr const char* drift        = "drift";
 inline constexpr const char* reverbPos    = "reverbPosition";
 inline constexpr const char* transport    = "followTransport";
 inline constexpr const char* reverbChar   = "reverbCharacter";
+inline constexpr const char* lofi         = "lofi";
 } // namespace ParamIDs
 
 namespace TimeMapping
@@ -105,6 +106,12 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout
         })));
     knob (ParamIDs::resonance, "Resonance", 0.2f);
     knob (ParamIDs::drift, "Drift", 0.0f);
+    layout.add (std::make_unique<AudioParameterFloat> (
+        ParameterID { ParamIDs::lofi, 1 }, "Lo-Fi", NormalisableRange<float> (0.0f, 1.0f), 0.0f,
+        AudioParameterFloatAttributes().withStringFromValueFunction ([] (float v, int)
+        {
+            return v < 0.001f ? String ("Clean") : String (juce::roundToInt (v * 100.0f)) + "%";
+        })));
     knob (ParamIDs::mix, "Mix", 0.5f);
     knob (ParamIDs::space, "Space", 0.25f);
 

@@ -101,8 +101,9 @@ public:
     bool isWaiting() const { return delay > 0; }
     bool ducksDry() const { return prm.ducksDry; }
 
-    // Renders one sample, accumulating into outL/outR.
-    void render (const HistoryBuffer& hb, float& outL, float& outR)
+    // Renders one sample, accumulating into outL/outR. clock scales the
+    // playback rate (LO-FI slows every head down, like a slower sampler).
+    void render (const HistoryBuffer& hb, float& outL, float& outR, double clock = 1.0)
     {
         if (! active)
             return;
@@ -170,7 +171,7 @@ public:
         outL += l * env * gainL;
         outR += r * env * gainR;
 
-        advance();
+        advance (clock);
     }
 
 private:
@@ -198,10 +199,10 @@ private:
         }
     }
 
-    void advance()
+    void advance (double clock)
     {
         age += 1.0;
-        phase += speed;
+        phase += speed * clock;
         speed *= glideMul;
 
         if (prm.loop)
